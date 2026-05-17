@@ -16,10 +16,9 @@ bearings, landmark notes, and points of interest so they can sketch their own ma
 ## Tech Stack
 
 - Deno 2 for tasks, TypeScript, and the HTTP runtime.
-- Hono for a small full-stack SSR server and API router.
-- Hono JSX for server-rendered page components.
+- Fresh for manually wired SSR routes and client islands.
 - Drizzle ORM v1 RC with SQLite storage through libSQL.
-- Zod plus Hono's validator middleware for form validation.
+- Zod for form validation.
 
 ## Getting Started
 
@@ -35,12 +34,12 @@ default, the local SQLite database lives at `data/survivalmap.sqlite` and is ign
 ## Common Commands
 
 ```sh
-deno task dev     # Run the SSR server with file watching
-deno task start   # Run the SSR server without file watching
-deno task check   # Type-check the server
+deno task dev     # Run Fresh with Vite in development
+deno task build   # Build Fresh into _fresh/
+deno task start   # Run the built Fresh server
+deno task check   # Type-check the app
 deno task lint    # Run Deno lint
 deno task fmt     # Format source files
-deno task build   # Cache and validate the server entry point
 deno task db:generate --name=<name>  # Generate a Drizzle migration
 deno task db:migrate                 # Apply pending Drizzle migrations
 ```
@@ -48,8 +47,12 @@ deno task db:migrate                 # Apply pending Drizzle migrations
 ## Project Structure
 
 ```text
-src/main.tsx      Hono routes and form handlers
-src/views.tsx     Hono JSX page components
+main.ts           Fresh app entry, route handlers, and manual route registration
+client.ts         Fresh client entry for islands and CSS
+vite.config.ts    Fresh Vite plugin configuration
+islands/          Client-hydrated island components
+components/       Shared server-rendered page and layout components
+assets/           CSS imported by the client entry
 src/db.ts         Drizzle SQLite connection
 src/schema.ts     Drizzle table schema
 data/             Local SQLite database directory
@@ -59,7 +62,6 @@ deno.json         Deno tasks, imports, lint, and format settings
 
 ## API
 
-- `GET /api/health` returns basic API status.
 - `POST /map` accepts form data with a `name`, validates it with Zod, creates a map, and redirects
   to `/map/:id`.
 - `GET /map/:id` renders a stored map.
@@ -74,10 +76,9 @@ curl -i -X POST http://localhost:8000/map \
 
 ## Framework Choice
 
-Use Hono plus Hono JSX now. Hono keeps this a single Deno instance and handles routing, validation,
-and server-rendered pages without committing to a larger app framework. Fresh is a better choice
-only if we want Deno-native file routes and islands. TanStack Start is better only if we commit to a
-React-first full-stack app with more framework structure.
+Use Fresh now. Fresh keeps the app Deno-native while adding manual SSR routes and island hydration
+for map tools that need browser-side interactivity. The app still runs as a single Deno process in
+production through Fresh's generated `_fresh/server.js` entry.
 
 Type safety for POST bodies still needs runtime validation. The current server validates submitted
 form data with Zod before handlers use it.

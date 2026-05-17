@@ -14,7 +14,9 @@ them.
 
 ## Architecture
 
-- `src/main.tsx` owns the Hono SSR server, React page components, and API routes.
+- `main.ts` owns the Fresh app setup and manual route registration.
+- `components/` owns server-rendered page components; `islands/` owns client-hydrated interactive
+  UI.
 - The app should run as a single Deno process unless there is a concrete reason to split services.
 - Keep request/response validation near the route until a shared schema module is clearly useful.
 - `deno.json` is the source of truth for tasks and imports.
@@ -36,9 +38,9 @@ deno task start
 
 - Prefer Deno tasks over adding npm scripts.
 - Do not add `package.json` unless there is a concrete tooling need.
-- Prefer Hono for server routes in the current architecture.
-- Use backend React components for SSR pages when component structure helps readability.
-- Do not add Fresh, TanStack, or Vite unless the product needs their extra structure.
+- Prefer manual Fresh route wiring in `main.ts` for server routes in the current architecture.
+- Use backend JSX components for SSR pages when component structure helps readability.
+- Do not add TanStack or another app framework unless the product needs its extra structure.
 - Keep the frontend local-first where practical.
 - Keep the app usable without authentication.
 - Validate unknown request input before treating it as typed data.

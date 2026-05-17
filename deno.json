@@ -1,31 +1,51 @@
 {
+  "nodeModulesDir": "auto",
   "tasks": {
-    "dev": "deno task db:migrate && deno run --allow-net --allow-env=PORT,NODE_ENV,LIBSQL_JS_DEV,DATABASE_URL --allow-ffi --allow-read=data --allow-write=data --watch=src/ src/main.tsx",
-    "check": "deno check src/main.tsx drizzle.config.ts",
+    "dev": "deno task db:migrate && vite --host 0.0.0.0",
+    "check": "deno check main.ts client.ts vite.config.ts drizzle.config.ts components/app_wrapper.tsx components/ui.tsx components/pages.tsx islands/map_grid.tsx src/db.ts src/schema.ts",
     "db:generate": "deno run -A npm:drizzle-kit@beta generate",
     "db:migrate": "deno run -A npm:drizzle-kit@beta migrate",
     "lint": "deno lint",
     "fmt": "deno fmt",
-    "build": "deno cache src/main.tsx",
-    "start": "deno task db:migrate && deno run --allow-net --allow-env=PORT,NODE_ENV,LIBSQL_JS_DEV,DATABASE_URL --allow-ffi --allow-read=data --allow-write=data src/main.tsx"
+    "build": "vite build",
+    "start": "deno task db:migrate && deno serve -A _fresh/server.js"
   },
   "imports": {
+    "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@^1.1.2",
     "@libsql/client": "npm:@libsql/client@^0.17.3",
-    "@hono/zod-validator": "jsr:@hono/zod-validator@^0.8.0",
     "drizzle-kit": "npm:drizzle-kit@beta",
     "drizzle-orm": "npm:drizzle-orm@beta",
     "drizzle-orm/libsql": "npm:drizzle-orm@beta/libsql",
     "drizzle-orm/sqlite-core": "npm:drizzle-orm@beta/sqlite-core",
-    "hono": "jsr:@hono/hono@^4.10.7",
-    "hono/jsx": "jsr:@hono/hono@^4.10.7/jsx",
-    "hono/jsx-renderer": "jsr:@hono/hono@^4.10.7/jsx-renderer",
-    "hono/jsx/jsx-runtime": "jsr:@hono/hono@^4.10.7/jsx/jsx-runtime",
+    "fresh": "jsr:@fresh/core@^2.3.3",
+    "preact": "npm:preact@^10.29.2",
+    "react": "npm:preact@^10.29.2/compat",
+    "react-dom": "npm:preact@^10.29.2/compat",
+    "react/jsx-runtime": "npm:preact@^10.29.2/jsx-runtime",
+    "vite": "npm:vite@^7.3.3",
     "zod": "npm:zod@^4.4.3"
   },
   "compilerOptions": {
-    "lib": ["deno.window", "dom", "dom.iterable", "dom.asynciterable", "es2022"],
+    "lib": ["dom", "dom.asynciterable", "dom.iterable", "deno.ns"],
     "jsx": "precompile",
-    "jsxImportSource": "hono/jsx",
+    "jsxImportSource": "preact",
+    "jsxPrecompileSkipElements": [
+      "a",
+      "img",
+      "source",
+      "body",
+      "html",
+      "head",
+      "title",
+      "meta",
+      "script",
+      "link",
+      "style",
+      "base",
+      "noscript",
+      "template"
+    ],
+    "types": ["vite/client"],
     "strict": true
   },
   "fmt": {
@@ -35,8 +55,8 @@
   },
   "lint": {
     "rules": {
-      "tags": ["recommended"]
+      "tags": ["fresh", "recommended"]
     }
   },
-  "nodeModulesDir": "auto"
+  "exclude": ["**/_fresh/*", "dist/"]
 }

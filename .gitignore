@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 dist/
+_fresh/
 node_modules/
 .vite/
 coverage/
