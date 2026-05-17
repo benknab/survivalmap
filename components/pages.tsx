@@ -60,23 +60,23 @@ export function HomePage(
         <Eyebrow>Shared survival map</Eyebrow>
         <h1>Survival Map</h1>
         <p>
-          Create a shared player-authored survival map, or paste a map ID to join an existing one.
-          Each map keeps a small nickname roster so the browser can remember who you are.
+          Make a rough field map for landmarks, bearings, notes, and points of interest. Start a new
+          map or join with an ID.
         </p>
       </Panel>
 
       {currentMaps.length > 0
         ? (
           <Panel className="tester">
-            <Eyebrow>Current maps</Eyebrow>
-            <h2>Pick up where you left off</h2>
+            <Eyebrow>Open maps</Eyebrow>
+            <h2>Continue a map</h2>
             <ul className="map-list">
               {currentMaps.map((map) => (
                 <li key={map.id}>
                   <a href={`/map/${map.id}`}>
                     <span>{map.name}</span>
                     <small>
-                      {map.userNickname} · {map.userRole}
+                      {map.userNickname} / {map.userRole}
                     </small>
                   </a>
                 </li>
@@ -89,12 +89,12 @@ export function HomePage(
       <Panel className="split-panel">
         <div>
           <Eyebrow>New map</Eyebrow>
-          <h2>Create a map</h2>
+          <h2>Start a map</h2>
           <CreateMapForm error={createMapError} fieldErrors={createMapFieldErrors} />
         </div>
         <div>
           <Eyebrow>Existing map</Eyebrow>
-          <h2>Use a map</h2>
+          <h2>Join a map</h2>
           <JoinMapForm error={joinMapError} fieldErrors={joinMapFieldErrors} />
         </div>
       </Panel>
@@ -111,10 +111,7 @@ export function UserSelectPage({ map, users, error }: UserSelectPageProps) {
       <Panel>
         <Eyebrow>Choose nickname</Eyebrow>
         <h1>{map.name}</h1>
-        <p>
-          Pick who you are on this map. The choice is stored in a long-lived browser cookie for this
-          map.
-        </p>
+        <p>Pick the nickname you use on this map.</p>
         <p className="map-id">
           Map ID <code>{map.id}</code>
         </p>
@@ -165,8 +162,7 @@ export function MapPage(
         </p>
         <MapGrid mapName={map.name} />
         <p>
-          This shared map is ready for notes, landmarks, bearings, distance estimates, and points of
-          interest.
+          Use the grid for notes, landmarks, bearings, distance estimates, and points of interest.
         </p>
         <LinkButton href="/">Home</LinkButton>
       </Panel>
@@ -186,7 +182,7 @@ export function MapPage(
               />
             </>
           )
-          : <p>Only the owner can add more people to this map.</p>}
+          : <p>The owner can add more people to this map.</p>}
       </Panel>
     </>
   );
@@ -214,7 +210,7 @@ export function MapNotFoundPage() {
       <Panel>
         <Eyebrow>Map not found</Eyebrow>
         <h1>No map here</h1>
-        <p>The requested map does not exist.</p>
+        <p>That map does not exist.</p>
         <LinkButton href="/">Create a map</LinkButton>
       </Panel>
     </>
