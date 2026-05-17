@@ -17,8 +17,9 @@ bearings, landmark notes, and points of interest so they can sketch their own ma
 
 - Deno 2 for tasks, TypeScript, and the HTTP runtime.
 - Hono for a small full-stack SSR server and API router.
-- React rendered on the server for page components.
-- Vite can be added later if the app needs bundled client-side TypeScript or hydration.
+- Hono JSX for server-rendered page components.
+- Drizzle ORM v1 RC with SQLite storage through libSQL.
+- Zod plus Hono's validator middleware for form validation.
 
 ## Getting Started
 
@@ -28,7 +29,8 @@ Install Deno 2, then run:
 deno task dev
 ```
 
-The app runs at `http://localhost:8000`.
+The dev task applies pending Drizzle migrations and starts the app at `http://localhost:8000`. By
+default, the local SQLite database lives at `data/survivalmap.sqlite` and is ignored by Git.
 
 ## Common Commands
 
@@ -39,38 +41,46 @@ deno task check   # Type-check the server
 deno task lint    # Run Deno lint
 deno task fmt     # Format source files
 deno task build   # Cache and validate the server entry point
+deno task db:generate --name=<name>  # Generate a Drizzle migration
+deno task db:migrate                 # Apply pending Drizzle migrations
 ```
 
 ## Project Structure
 
 ```text
-src/main.tsx React SSR page rendering and API routes
-deno.json    Deno tasks, imports, lint, and format settings
+src/main.tsx      Hono routes and form handlers
+src/views.tsx     Hono JSX page components
+src/db.ts         Drizzle SQLite connection
+src/schema.ts     Drizzle table schema
+data/             Local SQLite database directory
+drizzle/          Generated Drizzle migrations
+deno.json         Deno tasks, imports, lint, and format settings
 ```
 
 ## API
 
 - `GET /api/health` returns basic API status.
-- `POST /api/points` accepts JSON or form data and returns a typed JSON response.
+- `POST /map` accepts form data with a `name`, validates it with Zod, creates a map, and redirects
+  to `/map/:id`.
+- `GET /map/:id` renders a stored map.
 
 Example:
 
 ```sh
-curl -X POST http://localhost:8000/api/points \
-  -H "content-type: application/json" \
-  -d '{"name":"Starter base","note":"Testing the typed endpoint"}'
+curl -i -X POST http://localhost:8000/map \
+  -H "content-type: application/x-www-form-urlencoded" \
+  --data-urlencode "name=Livonia run"
 ```
 
 ## Framework Choice
 
-Use Hono plus React SSR now. Hono keeps this a single Deno instance and handles API routing; React
-gives us componentized server-rendered pages without committing to a larger app framework. Fresh is
-a better choice only if we want Deno-native file routes and islands. TanStack Start is better only
-if we commit to a React-first full-stack app with more framework structure.
+Use Hono plus Hono JSX now. Hono keeps this a single Deno instance and handles routing, validation,
+and server-rendered pages without committing to a larger app framework. Fresh is a better choice
+only if we want Deno-native file routes and islands. TanStack Start is better only if we commit to a
+React-first full-stack app with more framework structure.
 
-Type safety for POST bodies still needs runtime validation. The current server parses unknown
-request input into a typed `CreatePointInput` before handlers use it. If the schema grows, add
-Valibot or Zod rather than trusting raw JSON.
+Type safety for POST bodies still needs runtime validation. The current server validates submitted
+form data with Zod before handlers use it.
 
 ## Early Roadmap
 

@@ -1,23 +1,31 @@
 {
   "tasks": {
-    "dev": "deno run --allow-net --allow-env=PORT,NODE_ENV --watch=src/ src/main.tsx",
-    "check": "deno check src/main.tsx",
+    "dev": "deno task db:migrate && deno run --allow-net --allow-env=PORT,NODE_ENV,LIBSQL_JS_DEV,DATABASE_URL --allow-ffi --allow-read=data --allow-write=data --watch=src/ src/main.tsx",
+    "check": "deno check src/main.tsx drizzle.config.ts",
+    "db:generate": "deno run -A npm:drizzle-kit@beta generate",
+    "db:migrate": "deno run -A npm:drizzle-kit@beta migrate",
     "lint": "deno lint",
     "fmt": "deno fmt",
     "build": "deno cache src/main.tsx",
-    "start": "deno run --allow-net --allow-env=PORT,NODE_ENV src/main.tsx"
+    "start": "deno task db:migrate && deno run --allow-net --allow-env=PORT,NODE_ENV,LIBSQL_JS_DEV,DATABASE_URL --allow-ffi --allow-read=data --allow-write=data src/main.tsx"
   },
   "imports": {
+    "@libsql/client": "npm:@libsql/client@^0.17.3",
+    "@hono/zod-validator": "jsr:@hono/zod-validator@^0.8.0",
+    "drizzle-kit": "npm:drizzle-kit@beta",
+    "drizzle-orm": "npm:drizzle-orm@beta",
+    "drizzle-orm/libsql": "npm:drizzle-orm@beta/libsql",
+    "drizzle-orm/sqlite-core": "npm:drizzle-orm@beta/sqlite-core",
     "hono": "jsr:@hono/hono@^4.10.7",
-    "react": "npm:react@^19.2.1",
-    "react/jsx-runtime": "npm:react@^19.2.1/jsx-runtime",
-    "react-dom/server": "npm:react-dom@^19.2.1/server"
+    "hono/jsx": "jsr:@hono/hono@^4.10.7/jsx",
+    "hono/jsx-renderer": "jsr:@hono/hono@^4.10.7/jsx-renderer",
+    "hono/jsx/jsx-runtime": "jsr:@hono/hono@^4.10.7/jsx/jsx-runtime",
+    "zod": "npm:zod@^4.4.3"
   },
   "compilerOptions": {
     "lib": ["deno.window", "dom", "dom.iterable", "dom.asynciterable", "es2022"],
-    "jsx": "react-jsx",
-    "jsxImportSource": "react",
-    "types": ["npm:@types/react@^19.2.7", "npm:@types/react-dom@^19.2.3"],
+    "jsx": "precompile",
+    "jsxImportSource": "hono/jsx",
     "strict": true
   },
   "fmt": {
