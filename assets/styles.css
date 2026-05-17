@@ -37,8 +37,15 @@ section {
 }
 
 .hero,
-.tester {
+.tester,
+.split-panel {
   padding: 28px;
+}
+
+.split-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
 }
 
 .eyebrow {
@@ -60,6 +67,10 @@ h1 {
 
 h2 {
   margin: 0;
+}
+
+h3 {
+  margin: 26px 0 0;
 }
 
 p {
@@ -170,6 +181,85 @@ button,
   border-radius: 8px;
 }
 
+.current-user {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid rgba(124, 247, 212, 0.24);
+  border-radius: 999px;
+  color: #7cf7d4;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.user-list,
+.map-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 18px 0 0;
+  list-style: none;
+}
+
+.user-list li,
+.map-list a {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid rgba(124, 247, 212, 0.16);
+  border-radius: 16px;
+  background: rgba(3, 14, 16, 0.46);
+}
+
+.map-list a {
+  color: #e9fbff;
+  text-decoration: none;
+}
+
+.map-list small {
+  color: #7cf7d4;
+  font-weight: 900;
+}
+
+.user-picker {
+  margin: 24px 0;
+}
+
+.person-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  padding: 0 16px;
+  border: 1px solid rgba(124, 247, 212, 0.24);
+  color: #e9fbff;
+  background: rgba(3, 14, 16, 0.74);
+  text-align: left;
+}
+
+.person-button small {
+  color: #7cf7d4;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.compact-form {
+  margin-top: 12px;
+}
+
 .map-grid {
   display: grid;
   gap: 18px;
@@ -259,8 +349,13 @@ pre {
   }
 
   .hero,
-  .tester {
+  .tester,
+  .split-panel {
     padding: 20px;
+  }
+
+  .split-panel {
+    grid-template-columns: 1fr;
   }
 
   .map-tools {

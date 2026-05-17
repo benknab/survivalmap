@@ -1,38 +1,153 @@
 import { Head } from "fresh/runtime";
 import MapGrid from "../islands/map_grid.tsx";
-import type { MapRecord } from "../src/schema.ts";
-import { type CreateMapFieldErrors, CreateMapForm, Eyebrow, LinkButton, Panel } from "./ui.tsx";
+import type { MapRecord, UserRecord } from "../src/schema.ts";
+import {
+  type AddUserFieldErrors,
+  AddUserForm,
+  type CreateMapFieldErrors,
+  CreateMapForm,
+  Eyebrow,
+  type JoinMapFieldErrors,
+  JoinMapForm,
+  LinkButton,
+  Panel,
+} from "./ui.tsx";
 
 export type HomePageProps = {
+  currentMaps?: CurrentMap[];
   createMapError?: string;
   createMapFieldErrors?: CreateMapFieldErrors;
+  joinMapError?: string;
+  joinMapFieldErrors?: JoinMapFieldErrors;
 };
 
-export function HomePage({ createMapError, createMapFieldErrors = {} }: HomePageProps) {
+export type CurrentMap = {
+  id: string;
+  name: string;
+  userNickname: string;
+  userRole: UserRecord["role"];
+};
+
+export type MapPageProps = {
+  map: MapRecord;
+  currentUser: UserRecord;
+  users: UserRecord[];
+  addUserError?: string;
+  addUserFieldErrors?: AddUserFieldErrors;
+};
+
+export type UserSelectPageProps = {
+  map: MapRecord;
+  users: UserRecord[];
+  error?: string;
+};
+
+export function HomePage(
+  {
+    currentMaps = [],
+    createMapError,
+    createMapFieldErrors = {},
+    joinMapError,
+    joinMapFieldErrors = {},
+  }: HomePageProps,
+) {
   return (
     <>
       <Head>
         <title>Survival Map</title>
       </Head>
       <Panel>
-        <Eyebrow>Deno Fresh app</Eyebrow>
+        <Eyebrow>Shared survival map</Eyebrow>
         <h1>Survival Map</h1>
         <p>
-          Create a player-authored survival map and store it in the backend SQLite database. After
-          creation, the server redirects to the new map at <code>/map/:id</code>.
+          Create a shared player-authored survival map, or paste a map ID to join an existing one.
+          Each map keeps a small nickname roster so the browser can remember who you are.
         </p>
       </Panel>
 
-      <Panel className="tester">
-        <Eyebrow>SQLite storage</Eyebrow>
-        <h2>Create a map</h2>
-        <CreateMapForm error={createMapError} fieldErrors={createMapFieldErrors} />
+      {currentMaps.length > 0
+        ? (
+          <Panel className="tester">
+            <Eyebrow>Current maps</Eyebrow>
+            <h2>Pick up where you left off</h2>
+            <ul className="map-list">
+              {currentMaps.map((map) => (
+                <li key={map.id}>
+                  <a href={`/map/${map.id}`}>
+                    <span>{map.name}</span>
+                    <small>
+                      {map.userNickname} · {map.userRole}
+                    </small>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )
+        : null}
+
+      <Panel className="split-panel">
+        <div>
+          <Eyebrow>New map</Eyebrow>
+          <h2>Create a map</h2>
+          <CreateMapForm error={createMapError} fieldErrors={createMapFieldErrors} />
+        </div>
+        <div>
+          <Eyebrow>Existing map</Eyebrow>
+          <h2>Use a map</h2>
+          <JoinMapForm error={joinMapError} fieldErrors={joinMapFieldErrors} />
+        </div>
       </Panel>
     </>
   );
 }
 
-export function MapPage({ map }: { map: MapRecord }) {
+export function UserSelectPage({ map, users, error }: UserSelectPageProps) {
+  return (
+    <>
+      <Head>
+        <title>Choose user | {map.name}</title>
+      </Head>
+      <Panel>
+        <Eyebrow>Choose nickname</Eyebrow>
+        <h1>{map.name}</h1>
+        <p>
+          Pick who you are on this map. The choice is stored in a long-lived browser cookie for this
+          map.
+        </p>
+        <p className="map-id">
+          Map ID <code>{map.id}</code>
+        </p>
+        {error ? <p className="form-error" role="alert">{error}</p> : null}
+        {users.length > 0
+          ? (
+            <form action={`/map/${map.id}/session`} method="post" className="user-picker">
+              {users.map((user) => (
+                <button
+                  key={user.id}
+                  type="submit"
+                  name="userId"
+                  value={user.id}
+                  className="person-button"
+                >
+                  <span>{user.nickname}</span>
+                  <small>{user.role}</small>
+                </button>
+              ))}
+            </form>
+          )
+          : <p>No people have been added to this map yet.</p>}
+        <LinkButton href="/">Return home</LinkButton>
+      </Panel>
+    </>
+  );
+}
+
+export function MapPage(
+  { map, currentUser, users, addUserError, addUserFieldErrors = {} }: MapPageProps,
+) {
+  const isOwner = currentUser.role === "owner";
+
   return (
     <>
       <Head>
@@ -42,16 +157,51 @@ export function MapPage({ map }: { map: MapRecord }) {
         <Eyebrow>Player map</Eyebrow>
         <h1>{map.name}</h1>
         <p className="map-id">
-          UUID <code>{map.id}</code>
+          Map ID <code>{map.id}</code>
+        </p>
+        <p className="current-user">
+          Using this map as <strong>{currentUser.nickname}</strong>
+          {isOwner ? <span className="role-badge">owner</span> : null}
         </p>
         <MapGrid mapName={map.name} />
         <p>
-          This map record is loaded from SQLite through Drizzle. Notes, landmarks, bearings, and
-          points of interest can be attached to this map next.
+          This shared map is ready for notes, landmarks, bearings, distance estimates, and points of
+          interest.
         </p>
-        <LinkButton href="/">Create another map</LinkButton>
+        <LinkButton href="/">Home</LinkButton>
+      </Panel>
+
+      <Panel className="tester">
+        <Eyebrow>People</Eyebrow>
+        <h2>People on this map</h2>
+        <UserList users={users} />
+        {isOwner
+          ? (
+            <>
+              <h3>Add a person</h3>
+              <AddUserForm
+                action={`/map/${map.id}/users`}
+                error={addUserError}
+                fieldErrors={addUserFieldErrors}
+              />
+            </>
+          )
+          : <p>Only the owner can add more people to this map.</p>}
       </Panel>
     </>
+  );
+}
+
+function UserList({ users }: { users: UserRecord[] }) {
+  return (
+    <ul className="user-list">
+      {users.map((user) => (
+        <li key={user.id}>
+          <span>{user.nickname}</span>
+          <span className="role-badge">{user.role}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
