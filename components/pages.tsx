@@ -25,7 +25,6 @@ export type CurrentMap = {
   id: string;
   name: string;
   userNickname: string;
-  userRole: UserRecord["role"];
 };
 
 export type MapPageProps = {
@@ -75,9 +74,7 @@ export function HomePage(
                 <li key={map.id}>
                   <a href={`/map/${map.id}`}>
                     <span>{map.name}</span>
-                    <small>
-                      {map.userNickname} / {map.userRole}
-                    </small>
+                    <small>{map.userNickname}</small>
                   </a>
                 </li>
               ))}
@@ -128,7 +125,6 @@ export function UserSelectPage({ map, users, error }: UserSelectPageProps) {
                   className="person-button"
                 >
                   <span>{user.nickname}</span>
-                  <small>{user.role}</small>
                 </button>
               ))}
             </form>
@@ -143,8 +139,6 @@ export function UserSelectPage({ map, users, error }: UserSelectPageProps) {
 export function MapPage(
   { map, currentUser, users, addUserError, addUserFieldErrors = {} }: MapPageProps,
 ) {
-  const isOwner = currentUser.role === "owner";
-
   return (
     <>
       <Head>
@@ -158,7 +152,6 @@ export function MapPage(
         </p>
         <p className="current-user">
           Using this map as <strong>{currentUser.nickname}</strong>
-          {isOwner ? <span className="role-badge">owner</span> : null}
         </p>
         <MapGrid mapName={map.name} />
         <p>
@@ -171,18 +164,12 @@ export function MapPage(
         <Eyebrow>People</Eyebrow>
         <h2>People on this map</h2>
         <UserList users={users} />
-        {isOwner
-          ? (
-            <>
-              <h3>Add a person</h3>
-              <AddUserForm
-                action={`/map/${map.id}/users`}
-                error={addUserError}
-                fieldErrors={addUserFieldErrors}
-              />
-            </>
-          )
-          : <p>The owner can add more people to this map.</p>}
+        <h3>Add a person</h3>
+        <AddUserForm
+          action={`/map/${map.id}/users`}
+          error={addUserError}
+          fieldErrors={addUserFieldErrors}
+        />
       </Panel>
     </>
   );
@@ -194,7 +181,6 @@ function UserList({ users }: { users: UserRecord[] }) {
       {users.map((user) => (
         <li key={user.id}>
           <span>{user.nickname}</span>
-          <span className="role-badge">{user.role}</span>
         </li>
       ))}
     </ul>

@@ -89,9 +89,9 @@ export const app = new App()
       );
     }
 
-    const { map, owner } = await createMap(result.data);
+    const { map, user } = await createMap(result.data);
     const response = ctx.redirect(`/map/${map.id}`, 303);
-    setCurrentUserCookie(response.headers, ctx.req.headers, map.id, owner.id);
+    setCurrentUserCookie(response.headers, ctx.req.headers, map.id, user.id);
     return response;
   })
   .post("/map/join", async (ctx) => {
@@ -191,18 +191,6 @@ export const app = new App()
       );
     }
 
-    if (currentUser.role !== "owner") {
-      return ctx.render(
-        h<MapPageProps>(MapPage, {
-          map,
-          currentUser,
-          users: possibleUsers,
-          addUserError: "Only the owner can add people.",
-        }),
-        { status: 403 },
-      );
-    }
-
     const form = await ctx.req.formData();
     const result = addUserSchema.safeParse({ nickname: getFormString(form.get("nickname")) });
 
@@ -263,7 +251,6 @@ async function getCurrentMaps(headers: Headers): Promise<CurrentMap[]> {
       id: map.id,
       name: map.name,
       userNickname: user.nickname,
-      userRole: user.role,
     });
   }
 
@@ -272,30 +259,28 @@ async function getCurrentMaps(headers: Headers): Promise<CurrentMap[]> {
 
 async function createMap(
   input: CreateMapInput,
-): Promise<{ map: MapRecord; owner: UserRecord }> {
+): Promise<{ map: MapRecord; user: UserRecord }> {
   const map: MapRecord = {
     id: crypto.randomUUID(),
     name: input.name,
   };
 
-  const owner = await db.transaction(async (tx) => {
+  const user = await db.transaction(async (tx) => {
     await tx.insert(maps).values(map);
 
     return await tx.insert(users).values({
       mapId: map.id,
       nickname: input.nickname,
-      role: "owner",
     }).returning().get();
   });
 
-  return { map, owner };
+  return { map, user };
 }
 
 async function addUser(mapId: string, input: AddUserInput): Promise<UserRecord> {
   return await db.insert(users).values({
     mapId,
     nickname: input.nickname,
-    role: "member",
   }).returning().get();
 }
 
@@ -328,10 +313,6 @@ async function getCurrentUser(
 }
 
 function compareUsers(left: UserRecord, right: UserRecord): number {
-  if (left.role !== right.role) {
-    return left.role === "owner" ? -1 : 1;
-  }
-
   return left.nickname.localeCompare(right.nickname) || left.id - right.id;
 }
 
