@@ -31,6 +31,7 @@ type MapPoint = {
   y: number;
   z: number;
   addedByUserId: number;
+  deletedAt: string | null;
   addedByNickname: string;
 };
 
@@ -47,6 +48,11 @@ type PointListResponse = {
 };
 
 type PointCreateResponse = {
+  point?: MapPoint;
+  error?: string;
+};
+
+type PointUpdateResponse = {
   point?: MapPoint;
   error?: string;
 };
@@ -68,7 +74,7 @@ const minZoom = 0.32;
 const maxZoom = 2.8;
 const rangeRings = [500, 1000, 2000];
 
-export default function MapGrid({ mapId, mapName, currentUserNickname }: MapGridProps) {
+export default function MapGrid({ mapId, mapName }: MapGridProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const [view, setView] = useState<ViewState>({ panX: 0, panY: 0, zoom: 1 });
@@ -83,6 +89,7 @@ export default function MapGrid({ mapId, mapName, currentUserNickname }: MapGrid
   const [pointDraft, setPointDraft] = useState<PointDraft | null>(null);
   const [pointError, setPointError] = useState<string | null>(null);
   const [isSavingPoint, setIsSavingPoint] = useState(false);
+  const [pendingPointIds, setPendingPointIds] = useState<number[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -113,7 +120,10 @@ export default function MapGrid({ mapId, mapName, currentUserNickname }: MapGrid
 
       try {
         const response = await fetch(getPointsPath(mapId), { signal: controller.signal });
-        const payload = await response.json() as PointListResponse;
+        const payload = await readJsonResponse<PointListResponse>(
+          response,
+          "Could not load points.",
+        );
 
         if (!response.ok) {
           throw new Error(payload.error ?? "Could not load points.");
@@ -151,6 +161,8 @@ export default function MapGrid({ mapId, mapName, currentUserNickname }: MapGrid
   const coordinate = pointerCoord ?? screenToWorld(size.width / 2, size.height / 2, view, size);
   const tickStep = getTickStep(cellSize);
   const ticks = getTicks(view, size, tickStep);
+  const activePoints = points.filter((point) => !point.deletedAt);
+  const deletedPoints = points.filter((point) => point.deletedAt);
   const canvasStyle = [
     `--grid-cell: ${cellSize}px`,
     `--grid-major: ${cellSize * 5}px`,
@@ -282,7 +294,10 @@ export default function MapGrid({ mapId, mapName, currentUserNickname }: MapGrid
         headers: { "content-type": "application/json" },
         body: JSON.stringify(nextPoint),
       });
-      const payload = await response.json() as PointCreateResponse;
+      const payload = await readJsonResponse<PointCreateResponse>(
+        response,
+        "Could not save point.",
+      );
       const savedPoint = payload.point;
 
       if (!response.ok || !savedPoint) {
@@ -295,6 +310,40 @@ export default function MapGrid({ mapId, mapName, currentUserNickname }: MapGrid
       setPointError(getErrorMessage(error, "Could not save point."));
     } finally {
       setIsSavingPoint(false);
+    }
+  }
+
+  async function updatePointDeletedState(pointId: number, deleted: boolean) {
+    if (pendingPointIds.includes(pointId)) {
+      return;
+    }
+
+    setPendingPointIds((currentIds) => [...currentIds, pointId]);
+    setPointError(null);
+
+    try {
+      const response = await fetch(getPointPath(mapId, pointId), {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deleted }),
+      });
+      const payload = await readJsonResponse<PointUpdateResponse>(
+        response,
+        `Could not ${deleted ? "remove" : "restore"} point.`,
+      );
+      const updatedPoint = payload.point;
+
+      if (!response.ok || !updatedPoint) {
+        throw new Error(payload.error ?? `Could not ${deleted ? "remove" : "restore"} point.`);
+      }
+
+      setPoints((currentPoints) =>
+        currentPoints.map((point) => point.id === updatedPoint.id ? updatedPoint : point)
+      );
+    } catch (error) {
+      setPointError(getErrorMessage(error, `Could not ${deleted ? "remove" : "restore"} point.`));
+    } finally {
+      setPendingPointIds((currentIds) => currentIds.filter((id) => id !== pointId));
     }
   }
 
@@ -373,7 +422,7 @@ export default function MapGrid({ mapId, mapName, currentUserNickname }: MapGrid
           aria-label="Origin at (0, 0, 0)"
         />
 
-        {points.map((point) => {
+        {activePoints.map((point) => {
           const screen = worldToScreen(point, view, size);
 
           return (
@@ -412,14 +461,14 @@ export default function MapGrid({ mapId, mapName, currentUserNickname }: MapGrid
         <div className="point-panel-header">
           <div>
             <span>POI</span>
-            <strong>{points.length === 1 ? "1 point" : `${points.length} points`}</strong>
+            <strong>
+              {activePoints.length === 1 ? "1 point" : `${activePoints.length} points`}
+            </strong>
           </div>
           <button type="button" className="map-button point-add-button" onClick={startPointDraft}>
             Add point
           </button>
         </div>
-
-        <p className="point-user">Adding as {currentUserNickname}</p>
 
         {pointDraft
           ? (
@@ -492,19 +541,78 @@ export default function MapGrid({ mapId, mapName, currentUserNickname }: MapGrid
 
         {isLoadingPoints
           ? <p className="point-message">Loading points...</p>
-          : points.length === 0
-          ? <p className="point-message">No points saved yet.</p>
+          : activePoints.length === 0
+          ? (
+            <p className="point-message">
+              {points.length === 0 ? "No points saved yet." : "No active points."}
+            </p>
+          )
           : (
             <ol className="point-list">
-              {points.map((point) => (
-                <li key={point.id}>
-                  <strong>{point.name}</strong>
-                  <span>{formatCoordinateTuple(point, point.z)}</span>
-                  <small>Added by {point.addedByNickname}</small>
-                </li>
-              ))}
+              {activePoints.map((point) => {
+                const isPending = pendingPointIds.includes(point.id);
+
+                return (
+                  <li key={point.id}>
+                    <div className="point-list-details">
+                      <div className="point-list-title">
+                        <strong>{point.name}</strong>
+                        <small>({point.addedByNickname})</small>
+                      </div>
+                      <span>{formatCoordinateTuple(point, point.z)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="point-action-button remove"
+                      aria-label={isPending ? `Removing ${point.name}` : `Remove ${point.name}`}
+                      title={isPending ? "Removing point" : "Remove point"}
+                      disabled={isPending}
+                      onClick={() => updatePointDeletedState(point.id, true)}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </li>
+                );
+              })}
             </ol>
           )}
+
+        {deletedPoints.length > 0
+          ? (
+            <>
+              <div className="point-section-title">
+                Removed {deletedPoints.length === 1 ? "point" : "points"}
+              </div>
+              <ol className="point-list point-list-removed">
+                {deletedPoints.map((point) => {
+                  const isPending = pendingPointIds.includes(point.id);
+
+                  return (
+                    <li key={point.id}>
+                      <div className="point-list-details">
+                        <div className="point-list-title">
+                          <strong>{point.name}</strong>
+                          <small>({point.addedByNickname})</small>
+                        </div>
+                        <span>{formatCoordinateTuple(point, point.z)}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="point-action-button"
+                        aria-label={isPending ? `Restoring ${point.name}` : `Restore ${point.name}`}
+                        title={isPending ? "Restoring point" : "Restore point"}
+                        disabled={isPending}
+                        onClick={() => updatePointDeletedState(point.id, false)}
+                      >
+                        <RestoreIcon />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </>
+          )
+          : null}
       </div>
 
       <div className="map-control-panel" aria-label="Map controls">
@@ -650,6 +758,45 @@ function formatCoordinateInput(value: number): string {
 
 function getPointsPath(mapId: string): string {
   return `/map/${encodeURIComponent(mapId)}/points`;
+}
+
+function getPointPath(mapId: string, pointId: number): string {
+  return `${getPointsPath(mapId)}/${encodeURIComponent(pointId)}`;
+}
+
+async function readJsonResponse<T>(response: Response, fallback: string): Promise<T> {
+  const text = await response.text();
+
+  if (!text) {
+    throw new Error(fallback);
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(fallback);
+  }
+}
+
+function TrashIcon() {
+  return (
+    <svg className="point-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 7h16" />
+      <path d="M9 7V5h6v2" />
+      <path d="M7 7l1 13h8l1-13" />
+      <path d="M10 11v5" />
+      <path d="M14 11v5" />
+    </svg>
+  );
+}
+
+function RestoreIcon() {
+  return (
+    <svg className="point-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M7 7a7 7 0 1 1-1.8 6.8" />
+      <path d="M7 7H3V3" />
+    </svg>
+  );
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {

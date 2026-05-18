@@ -70,15 +70,28 @@ const addPointSchema = z.object({
   z: pointCoordinateSchema,
 });
 
+const pointIdSchema = z.coerce.number().int().positive();
+
+const updatePointSchema = z.object({
+  deleted: z.boolean(),
+});
+
 type CreateMapInput = z.infer<typeof createMapSchema>;
 type AddUserInput = z.infer<typeof addUserSchema>;
 type AddPointInput = z.infer<typeof addPointSchema>;
+type UpdatePointInput = z.infer<typeof updatePointSchema>;
 type PointResponse = PointRecord & { addedByNickname: string };
 
 export const app = new App()
   .use(staticFiles())
   .appWrapper(AppWrapper)
-  .onError("*", (ctx) => ctx.render(h(ErrorPage, {}), { status: 500 }))
+  .onError("*", (ctx) => {
+    if (isPointApiRequest(ctx.req)) {
+      return Response.json({ error: "Unexpected point server error." }, { status: 500 });
+    }
+
+    return ctx.render(h(ErrorPage, {}), { status: 500 });
+  })
   .get("/", async (ctx) => {
     return ctx.render(h<HomePageProps>(HomePage, await getHomePageProps(ctx.req.headers)));
   })
@@ -174,6 +187,43 @@ export const app = new App()
     const pointRow = await addPoint(map.id, currentUser.id, result.data);
 
     return Response.json({ point: getPointResponse(pointRow, currentUser) }, { status: 201 });
+  })
+  .patch("/map/:id/points/:pointId", async (ctx) => {
+    const map = await getMap(ctx.params.id);
+
+    if (!map) {
+      return Response.json({ error: "Map not found." }, { status: 404 });
+    }
+
+    const currentUser = await getCurrentUser(ctx.req.headers, map.id);
+
+    if (!currentUser) {
+      return Response.json({ error: "Choose who you are before changing points." }, {
+        status: 401,
+      });
+    }
+
+    const pointIdResult = pointIdSchema.safeParse(ctx.params.pointId);
+
+    if (!pointIdResult.success) {
+      return Response.json({ error: "Point not found." }, { status: 404 });
+    }
+
+    const body = await getJsonBody(ctx.req);
+    const result = updatePointSchema.safeParse(body);
+
+    if (!result.success) {
+      return Response.json({ error: "Point update is invalid." }, { status: 400 });
+    }
+
+    const pointRow = await updatePoint(map.id, pointIdResult.data, result.data);
+
+    if (!pointRow) {
+      return Response.json({ error: "Point not found." }, { status: 404 });
+    }
+
+    const addedByUser = await getUserForMap(map.id, pointRow.addedByUserId);
+    return Response.json({ point: getPointResponse(pointRow, addedByUser) });
   })
   .get("/map/:id", async (ctx) => {
     const map = await getMap(ctx.params.id);
@@ -349,6 +399,16 @@ async function addPoint(
   }).returning().get();
 }
 
+async function updatePoint(
+  mapId: string,
+  pointId: number,
+  input: UpdatePointInput,
+): Promise<PointRecord | undefined> {
+  return await db.update(point).set({
+    deletedAt: input.deleted ? new Date().toISOString() : null,
+  }).where(and(eq(point.mapId, mapId), eq(point.id, pointId))).returning().get();
+}
+
 async function getMap(id: string): Promise<MapRecord | undefined> {
   return await db.select().from(maps).where(eq(maps.id, id)).get();
 }
@@ -404,6 +464,10 @@ function compareUsers(left: UserRecord, right: UserRecord): number {
 
 function getFormString(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
+}
+
+function isPointApiRequest(request: Request): boolean {
+  return new URL(request.url).pathname.includes("/points");
 }
 
 async function getJsonBody(request: Request): Promise<unknown> {

@@ -631,12 +631,12 @@ button:hover,
   display: grid;
   width: min(340px, calc(100vw - 36px));
   max-height: calc(100dvh - 176px);
-  gap: 10px;
+  gap: 8px;
   overflow: auto;
-  padding: 12px;
+  padding: 10px;
   border-radius: 2px;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
 }
 
 .point-panel-header {
@@ -652,13 +652,21 @@ button:hover,
 }
 
 .point-panel-header span,
-.point-user,
+.point-section-title,
 .point-list small,
 .point-message {
   color: var(--muted);
 }
 
 .point-panel-header span {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.point-section-title {
+  padding-top: 4px;
   font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -674,7 +682,6 @@ button:hover,
   white-space: nowrap;
 }
 
-.point-user,
 .point-message {
   max-width: none;
   margin: 0;
@@ -723,9 +730,63 @@ button:hover,
 
 .point-list li {
   display: grid;
-  gap: 3px;
-  padding: 9px 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 0;
   border-top: 1px solid rgba(125, 89, 50, 0.18);
+}
+
+.point-list-details {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.point-list-title {
+  display: flex;
+  min-width: 0;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.point-list-removed li {
+  opacity: 0.74;
+}
+
+.point-list-removed strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.point-action-button {
+  display: grid;
+  width: 28px;
+  min-height: 28px;
+  place-items: center;
+  padding: 0;
+  border-color: rgba(125, 89, 50, 0.28);
+  color: var(--ink);
+  background: transparent;
+}
+
+.point-action-button:hover {
+  background: var(--wash);
+}
+
+.point-action-button.remove {
+  border-color: rgba(155, 61, 46, 0.42);
+  color: var(--error);
+}
+
+.point-action-icon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .point-list strong,

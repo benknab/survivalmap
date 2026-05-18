@@ -23,6 +23,7 @@ export const point = sqliteTable("point", {
   addedByUserId: integer("added_by_user_id").notNull().references(() => users.id, {
     onDelete: "cascade",
   }),
+  deletedAt: text("deleted_at"),
 });
 
 export type MapRecord = typeof maps.$inferSelect;
