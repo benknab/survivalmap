@@ -19,15 +19,8 @@ import type {
   CreateMapFieldErrors,
   JoinMapFieldErrors,
 } from "./components/ui.tsx";
-import { db } from "./src/db.ts";
-import {
-  type MapRecord,
-  maps,
-  point,
-  type PointRecord,
-  type UserRecord,
-  users,
-} from "./src/schema.ts";
+import { db } from "./db.ts";
+import { type MapRecord, maps, point, type PointRecord, type UserRecord, users } from "./schema.ts";
 
 const userCookieName = "survivalmap_users";
 const userCookieMaxAgeSeconds = 60 * 60 * 24 * 365 * 20;

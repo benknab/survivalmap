@@ -1,6 +1,6 @@
 import { Head } from "fresh/runtime";
 import MapGrid from "../islands/map_grid.tsx";
-import type { MapRecord, UserRecord } from "../src/schema.ts";
+import type { MapRecord, UserRecord } from "../schema.ts";
 import {
   type AddUserFieldErrors,
   type CreateMapFieldErrors,

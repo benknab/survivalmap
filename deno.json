@@ -2,7 +2,7 @@
   "nodeModulesDir": "auto",
   "tasks": {
     "dev": "deno task db:migrate && vite --host 0.0.0.0",
-    "check": "deno check main.ts client.ts vite.config.ts drizzle.config.ts components/app_wrapper.tsx components/ui.tsx components/pages.tsx islands/map_grid.tsx src/db.ts src/schema.ts",
+    "check": "deno check src/main.ts src/client.ts vite.config.ts drizzle.config.ts",
     "db:generate": "deno run -A npm:drizzle-kit@beta generate",
     "db:migrate": "deno run -A npm:drizzle-kit@beta migrate",
     "lint": "deno lint",

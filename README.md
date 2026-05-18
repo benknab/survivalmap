@@ -44,39 +44,10 @@ deno task db:generate --name=<name>  # Generate a Drizzle migration
 deno task db:migrate                 # Apply pending Drizzle migrations
 ```
 
-## Project Structure
+## Maintenance Notes
 
-```text
-main.ts           Fresh app entry, route handlers, and manual route registration
-client.ts         Fresh client entry for islands and CSS
-vite.config.ts    Fresh Vite plugin configuration
-islands/          Client-hydrated island components
-components/       Shared server-rendered page and layout components
-assets/           CSS imported by the client entry
-src/db.ts         Drizzle SQLite connection
-src/schema.ts     Drizzle table schema
-data/             Local SQLite database directory
-drizzle/          Generated Drizzle migrations
-deno.json         Deno tasks, imports, lint, and format settings
-```
-
-## API
-
-- `POST /map` accepts form data with a `name` and `nickname`, validates it with Zod, creates a map,
-  and redirects to `/map/:id`.
-- `GET /map/:id` renders a stored map.
-- `GET /map/:id/points` returns points for a map as JSON.
-- `POST /map/:id/points` accepts JSON with `name`, `x`, `y`, and `z`. The current selected user is
-  recorded as the person who added the point.
-
-Example:
-
-```sh
-curl -i -X POST http://localhost:8000/map \
-  -H "content-type: application/x-www-form-urlencoded" \
-  --data-urlencode "name=Livonia run" \
-  --data-urlencode "nickname=Ranger"
-```
+Source layout and API route details are intentionally not duplicated here. Use `deno.json` and the
+source code as the current source of truth.
 
 ## Framework Choice
 

@@ -14,12 +14,17 @@ them.
 
 ## Architecture
 
-- `main.ts` owns the Fresh app setup and manual route registration.
-- `components/` owns server-rendered page components; `islands/` owns client-hydrated interactive
-  UI.
+- `src/main.ts` owns the Fresh app setup and manual route registration.
+- `src/components/` owns server-rendered page components; `src/islands/` owns client-hydrated
+  interactive UI.
+- Keep source code under `src/`; the repository root is for config, docs, generated output,
+  migrations, and local data.
 - The app should run as a single Deno process unless there is a concrete reason to split services.
 - Keep request/response validation near the route until a shared schema module is clearly useful.
 - `deno.json` is the source of truth for tasks and imports.
+- Do not keep `README.md` in lockstep with internal file paths or API inventories. Discover the
+  current structure and route behavior from source when needed, and update README only for
+  user-facing product, setup, or usage guidance.
 
 ## Commands
 
@@ -38,7 +43,7 @@ deno task start
 
 - Prefer Deno tasks over adding npm scripts.
 - Do not add `package.json` unless there is a concrete tooling need.
-- Prefer manual Fresh route wiring in `main.ts` for server routes in the current architecture.
+- Prefer manual Fresh route wiring in `src/main.ts` for server routes in the current architecture.
 - Use backend JSX components for SSR pages when component structure helps readability.
 - Do not add TanStack or another app framework unless the product needs its extra structure.
 - Keep the frontend local-first where practical.
