@@ -13,6 +13,7 @@
   "imports": {
     "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@^1.1.2",
     "@libsql/client": "npm:@libsql/client@^0.17.3",
+    "@tanstack/react-query": "npm:@tanstack/react-query@^5.59.0",
     "drizzle-kit": "npm:drizzle-kit@beta",
     "drizzle-orm": "npm:drizzle-orm@beta",
     "drizzle-orm/libsql": "npm:drizzle-orm@beta/libsql",

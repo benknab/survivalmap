@@ -36,6 +36,7 @@
     "npm:@preact/signals@^2.5.1": "2.9.0_preact@10.29.2",
     "npm:@prefresh/vite@^2.4.8": "2.4.12_preact@10.29.2_vite@7.3.3__picomatch@4.0.4",
     "npm:@remix-run/node-fetch-server@0.12": "0.12.0",
+    "npm:@tanstack/react-query@^5.59.0": "5.100.10_react@19.2.6",
     "npm:@types/babel__core@^7.20.5": "7.20.5",
     "npm:drizzle-kit@beta": "1.0.0-beta.22",
     "npm:drizzle-orm@beta": "1.0.0-beta.22_@libsql+client@0.17.3_@opentelemetry+api@1.9.1_zod@4.4.3",
@@ -1035,6 +1036,16 @@
       "os": ["win32"],
       "cpu": ["x64"]
     },
+    "@tanstack/query-core@5.100.10": {
+      "integrity": "sha512-8UR0yJR+GiQ40m3lPhUr0xbfAupe6GSQiksSBSa9SM2NjezFyxXCIA69/lz8cSoNKZLrw1/PktIyQBJcVeMi3w=="
+    },
+    "@tanstack/react-query@5.100.10_react@19.2.6": {
+      "integrity": "sha512-FLaZf2RCrA/Zgp4aiu5tG3TyasTRO7aZ99skxQpr3Hg/zXOhu6yq5FZCYQ/tRaJtM9ylnoK8tFK7PolXQadv6Q==",
+      "dependencies": [
+        "@tanstack/query-core",
+        "react"
+      ]
+    },
     "@types/babel__core@7.20.5": {
       "integrity": "sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==",
       "dependencies": [
@@ -1354,6 +1365,9 @@
     "promise-limit@2.7.0": {
       "integrity": "sha512-7nJ6v5lnJsXwGprnGXga4wx6d1POjvi5Qmf1ivTRxTjH4Z/9Czja/UCMLVmB9N93GeWOU93XaFaEt6jbuoagNw=="
     },
+    "react@19.2.6": {
+      "integrity": "sha512-sfWGGfavi0xr8Pg0sVsyHMAOziVYKgPLNrS7ig+ivMNb3wbCBw3KxtflsGBAwD3gYQlE/AEZsTLgToRrSCjb0Q=="
+    },
     "resolve-pkg-maps@1.0.0": {
       "integrity": "sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw=="
     },
@@ -1448,6 +1462,7 @@
       "jsr:@fresh/core@^2.3.3",
       "jsr:@fresh/plugin-vite@^1.1.2",
       "npm:@libsql/client@~0.17.3",
+      "npm:@tanstack/react-query@^5.59.0",
       "npm:drizzle-kit@beta",
       "npm:drizzle-orm@beta",
       "npm:preact@^10.29.2",

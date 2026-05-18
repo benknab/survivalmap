@@ -1,4 +1,11 @@
-import type { JSX } from "preact";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import type { ComponentChildren, FunctionComponent, JSX } from "preact";
 import { useEffect, useRef, useState } from "react";
 
 type MapGridProps = {
@@ -42,6 +49,13 @@ type PointDraft = {
   z: string;
 };
 
+type PointInput = {
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+};
+
 type PointListResponse = {
   points?: MapPoint[];
   error?: string;
@@ -74,7 +88,25 @@ const minZoom = 0.32;
 const maxZoom = 2.8;
 const rangeRings = [500, 1000, 2000];
 
-export default function MapGrid({ mapId, mapName }: MapGridProps) {
+// TanStack ships React typings; Fresh runs it through Preact compat at runtime.
+const PreactQueryClientProvider = QueryClientProvider as unknown as FunctionComponent<{
+  client: QueryClient;
+  children: ComponentChildren;
+}>;
+
+export default function MapGrid(props: MapGridProps) {
+  const [queryClient] = useState(() => new QueryClient());
+
+  return (
+    <PreactQueryClientProvider client={queryClient}>
+      <MapGridContents {...props} />
+    </PreactQueryClientProvider>
+  );
+}
+
+function MapGridContents({ mapId, mapName }: MapGridProps) {
+  const queryClient = useQueryClient();
+  const pointsQueryKey = ["map-points", mapId] as const;
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const [view, setView] = useState<ViewState>({ panX: 0, panY: 0, zoom: 1 });
@@ -84,12 +116,45 @@ export default function MapGrid({ mapId, mapName }: MapGridProps) {
   }));
   const [isDragging, setIsDragging] = useState(false);
   const [pointerCoord, setPointerCoord] = useState<Coordinate | null>(null);
-  const [points, setPoints] = useState<MapPoint[]>([]);
-  const [isLoadingPoints, setIsLoadingPoints] = useState(true);
   const [pointDraft, setPointDraft] = useState<PointDraft | null>(null);
   const [pointError, setPointError] = useState<string | null>(null);
-  const [isSavingPoint, setIsSavingPoint] = useState(false);
   const [pendingPointIds, setPendingPointIds] = useState<number[]>([]);
+  const pointsQuery = useQuery({
+    queryKey: pointsQueryKey,
+    queryFn: ({ signal }) => fetchPoints(mapId, signal),
+  });
+  const createPointMutation = useMutation({
+    mutationFn: (point: PointInput) => createPoint(mapId, point),
+    onSuccess: (savedPoint) => {
+      queryClient.setQueryData<MapPoint[]>(pointsQueryKey, (currentPoints) => [
+        ...(currentPoints ?? []),
+        savedPoint,
+      ]);
+      setPointDraft(null);
+    },
+    onError: (error) => {
+      setPointError(getErrorMessage(error, "Could not save point."));
+    },
+  });
+  const updatePointMutation = useMutation({
+    mutationFn: ({ pointId, deleted }: { pointId: number; deleted: boolean }) =>
+      updatePointDeletedState(mapId, pointId, deleted),
+    onSuccess: (updatedPoint) => {
+      queryClient.setQueryData<MapPoint[]>(
+        pointsQueryKey,
+        (currentPoints) =>
+          currentPoints?.map((point) => point.id === updatedPoint.id ? updatedPoint : point) ?? [
+            updatedPoint,
+          ],
+      );
+    },
+    onError: (error, { deleted }) => {
+      setPointError(getErrorMessage(error, `Could not ${deleted ? "remove" : "restore"} point.`));
+    },
+    onSettled: (_updatedPoint, _error, { pointId }) => {
+      setPendingPointIds((currentIds) => currentIds.filter((id) => id !== pointId));
+    },
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -111,58 +176,17 @@ export default function MapGrid({ mapId, mapName }: MapGridProps) {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    let isActive = true;
-
-    async function loadPoints() {
-      setIsLoadingPoints(true);
-
-      try {
-        const response = await fetch(getPointsPath(mapId), { signal: controller.signal });
-        const payload = await readJsonResponse<PointListResponse>(
-          response,
-          "Could not load points.",
-        );
-
-        if (!response.ok) {
-          throw new Error(payload.error ?? "Could not load points.");
-        }
-
-        if (isActive) {
-          setPoints(Array.isArray(payload.points) ? payload.points : []);
-        }
-      } catch (error) {
-        if (isAbortError(error)) {
-          return;
-        }
-
-        if (isActive) {
-          setPointError(getErrorMessage(error, "Could not load points."));
-        }
-      } finally {
-        if (isActive) {
-          setIsLoadingPoints(false);
-        }
-      }
-    }
-
-    loadPoints();
-
-    return () => {
-      isActive = false;
-      controller.abort();
-    };
-  }, [mapId]);
-
   const pixelsPerMeter = getPixelsPerMeter(view.zoom);
   const cellSize = baseCellPixels * view.zoom;
   const origin = worldToScreen({ x: 0, y: 0 }, view, size);
   const coordinate = pointerCoord ?? screenToWorld(size.width / 2, size.height / 2, view, size);
   const tickStep = getTickStep(cellSize);
   const ticks = getTicks(view, size, tickStep);
+  const points = pointsQuery.data ?? [];
   const activePoints = points.filter((point) => !point.deletedAt);
   const deletedPoints = points.filter((point) => point.deletedAt);
+  const visiblePointError = pointError ??
+    (pointsQuery.error ? getErrorMessage(pointsQuery.error, "Could not load points.") : null);
   const canvasStyle = [
     `--grid-cell: ${cellSize}px`,
     `--grid-major: ${cellSize * 5}px`,
@@ -263,10 +287,10 @@ export default function MapGrid({ mapId, mapName }: MapGridProps) {
     setPointDraft((currentDraft) => currentDraft ? { ...currentDraft, [field]: value } : null);
   }
 
-  async function handlePointSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>) {
+  function handlePointSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!pointDraft || isSavingPoint) {
+    if (!pointDraft || createPointMutation.isPending) {
       return;
     }
 
@@ -285,66 +309,18 @@ export default function MapGrid({ mapId, mapName }: MapGridProps) {
       return;
     }
 
-    setIsSavingPoint(true);
     setPointError(null);
-
-    try {
-      const response = await fetch(getPointsPath(mapId), {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(nextPoint),
-      });
-      const payload = await readJsonResponse<PointCreateResponse>(
-        response,
-        "Could not save point.",
-      );
-      const savedPoint = payload.point;
-
-      if (!response.ok || !savedPoint) {
-        throw new Error(payload.error ?? "Could not save point.");
-      }
-
-      setPoints((currentPoints) => [...currentPoints, savedPoint]);
-      setPointDraft(null);
-    } catch (error) {
-      setPointError(getErrorMessage(error, "Could not save point."));
-    } finally {
-      setIsSavingPoint(false);
-    }
+    createPointMutation.mutate(nextPoint);
   }
 
-  async function updatePointDeletedState(pointId: number, deleted: boolean) {
+  function handleUpdatePointDeletedState(pointId: number, deleted: boolean) {
     if (pendingPointIds.includes(pointId)) {
       return;
     }
 
     setPendingPointIds((currentIds) => [...currentIds, pointId]);
     setPointError(null);
-
-    try {
-      const response = await fetch(getPointPath(mapId, pointId), {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ deleted }),
-      });
-      const payload = await readJsonResponse<PointUpdateResponse>(
-        response,
-        `Could not ${deleted ? "remove" : "restore"} point.`,
-      );
-      const updatedPoint = payload.point;
-
-      if (!response.ok || !updatedPoint) {
-        throw new Error(payload.error ?? `Could not ${deleted ? "remove" : "restore"} point.`);
-      }
-
-      setPoints((currentPoints) =>
-        currentPoints.map((point) => point.id === updatedPoint.id ? updatedPoint : point)
-      );
-    } catch (error) {
-      setPointError(getErrorMessage(error, `Could not ${deleted ? "remove" : "restore"} point.`));
-    } finally {
-      setPendingPointIds((currentIds) => currentIds.filter((id) => id !== pointId));
-    }
+    updatePointMutation.mutate({ pointId, deleted });
   }
 
   function getEventCoordinate(
@@ -521,13 +497,13 @@ export default function MapGrid({ mapId, mapName }: MapGridProps) {
                 </label>
               </div>
               <div className="point-form-actions">
-                <button type="submit" disabled={isSavingPoint}>
-                  {isSavingPoint ? "Saving..." : "Save point"}
+                <button type="submit" disabled={createPointMutation.isPending}>
+                  {createPointMutation.isPending ? "Saving..." : "Save point"}
                 </button>
                 <button
                   type="button"
                   className="secondary-button"
-                  disabled={isSavingPoint}
+                  disabled={createPointMutation.isPending}
                   onClick={() => setPointDraft(null)}
                 >
                   Cancel
@@ -537,9 +513,11 @@ export default function MapGrid({ mapId, mapName }: MapGridProps) {
           )
           : null}
 
-        {pointError ? <p className="point-message error" role="alert">{pointError}</p> : null}
+        {visiblePointError
+          ? <p className="point-message error" role="alert">{visiblePointError}</p>
+          : null}
 
-        {isLoadingPoints
+        {pointsQuery.isPending
           ? <p className="point-message">Loading points...</p>
           : activePoints.length === 0
           ? (
@@ -567,7 +545,7 @@ export default function MapGrid({ mapId, mapName }: MapGridProps) {
                       aria-label={isPending ? `Removing ${point.name}` : `Remove ${point.name}`}
                       title={isPending ? "Removing point" : "Remove point"}
                       disabled={isPending}
-                      onClick={() => updatePointDeletedState(point.id, true)}
+                      onClick={() => handleUpdatePointDeletedState(point.id, true)}
                     >
                       <TrashIcon />
                     </button>
@@ -602,7 +580,7 @@ export default function MapGrid({ mapId, mapName }: MapGridProps) {
                         aria-label={isPending ? `Restoring ${point.name}` : `Restore ${point.name}`}
                         title={isPending ? "Restoring point" : "Restore point"}
                         disabled={isPending}
-                        onClick={() => updatePointDeletedState(point.id, false)}
+                        onClick={() => handleUpdatePointDeletedState(point.id, false)}
                       >
                         <RestoreIcon />
                       </button>
@@ -764,6 +742,56 @@ function getPointPath(mapId: string, pointId: number): string {
   return `${getPointsPath(mapId)}/${encodeURIComponent(pointId)}`;
 }
 
+async function fetchPoints(mapId: string, signal?: AbortSignal): Promise<MapPoint[]> {
+  const response = await fetch(getPointsPath(mapId), { signal });
+  const payload = await readJsonResponse<PointListResponse>(response, "Could not load points.");
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Could not load points.");
+  }
+
+  return Array.isArray(payload.points) ? payload.points : [];
+}
+
+async function createPoint(mapId: string, point: PointInput): Promise<MapPoint> {
+  const response = await fetch(getPointsPath(mapId), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(point),
+  });
+  const payload = await readJsonResponse<PointCreateResponse>(response, "Could not save point.");
+  const savedPoint = payload.point;
+
+  if (!response.ok || !savedPoint) {
+    throw new Error(payload.error ?? "Could not save point.");
+  }
+
+  return savedPoint;
+}
+
+async function updatePointDeletedState(
+  mapId: string,
+  pointId: number,
+  deleted: boolean,
+): Promise<MapPoint> {
+  const response = await fetch(getPointPath(mapId, pointId), {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ deleted }),
+  });
+  const payload = await readJsonResponse<PointUpdateResponse>(
+    response,
+    `Could not ${deleted ? "remove" : "restore"} point.`,
+  );
+  const updatedPoint = payload.point;
+
+  if (!response.ok || !updatedPoint) {
+    throw new Error(payload.error ?? `Could not ${deleted ? "remove" : "restore"} point.`);
+  }
+
+  return updatedPoint;
+}
+
 async function readJsonResponse<T>(response: Response, fallback: string): Promise<T> {
   const text = await response.text();
 
@@ -801,10 +829,6 @@ function RestoreIcon() {
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
-}
-
-function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError";
 }
 
 function clamp(value: number, min: number, max: number): number {
