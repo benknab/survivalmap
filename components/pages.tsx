@@ -3,7 +3,6 @@ import MapGrid from "../islands/map_grid.tsx";
 import type { MapRecord, UserRecord } from "../src/schema.ts";
 import {
   type AddUserFieldErrors,
-  AddUserForm,
   type CreateMapFieldErrors,
   CreateMapForm,
   Eyebrow,
@@ -137,53 +136,17 @@ export function UserSelectPage({ map, users, error }: UserSelectPageProps) {
 }
 
 export function MapPage(
-  { map, currentUser, users, addUserError, addUserFieldErrors = {} }: MapPageProps,
+  { map }: MapPageProps,
 ) {
   return (
     <>
       <Head>
         <title>{map.name} | Survival Map</title>
       </Head>
-      <Panel className="hero map-card">
-        <Eyebrow>Player map</Eyebrow>
-        <h1>{map.name}</h1>
-        <p className="map-id">
-          Map ID <code>{map.id}</code>
-        </p>
-        <p className="current-user">
-          Using this map as <strong>{currentUser.nickname}</strong>
-        </p>
+      <div className="map-page">
         <MapGrid mapName={map.name} />
-        <p>
-          Use the grid for notes, landmarks, bearings, distance estimates, and points of interest.
-        </p>
-        <LinkButton href="/">Home</LinkButton>
-      </Panel>
-
-      <Panel className="tester">
-        <Eyebrow>People</Eyebrow>
-        <h2>People on this map</h2>
-        <UserList users={users} />
-        <h3>Add a person</h3>
-        <AddUserForm
-          action={`/map/${map.id}/users`}
-          error={addUserError}
-          fieldErrors={addUserFieldErrors}
-        />
-      </Panel>
+      </div>
     </>
-  );
-}
-
-function UserList({ users }: { users: UserRecord[] }) {
-  return (
-    <ul className="user-list">
-      {users.map((user) => (
-        <li key={user.id}>
-          <span>{user.nickname}</span>
-        </li>
-      ))}
-    </ul>
   );
 }
 

@@ -41,6 +41,16 @@ body::before {
   opacity: 0.45;
 }
 
+body:has(.map-page) {
+  overflow: hidden;
+}
+
+body:has(.map-page) main {
+  width: 100%;
+  min-height: 100dvh;
+  padding: 0;
+}
+
 main {
   display: grid;
   width: min(1080px, 100%);
@@ -319,82 +329,317 @@ button:hover,
   margin-top: 12px;
 }
 
-.map-grid {
-  display: grid;
-  gap: 18px;
-  margin: 30px 0;
-}
-
-.grid-preview {
-  position: relative;
-  display: grid;
-  min-height: 360px;
-  place-items: center;
+.map-page {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
   overflow: hidden;
-  border: 1px solid #c8b89d;
-  background:
-    radial-gradient(circle at 24% 26%, rgba(125, 89, 50, 0.13), transparent 8rem),
-    radial-gradient(circle at 68% 74%, rgba(125, 89, 50, 0.11), transparent 10rem),
-    linear-gradient(rgba(66, 52, 34, 0.13) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(66, 52, 34, 0.13) 1px, transparent 1px),
-    linear-gradient(135deg, rgba(255, 252, 244, 0.82), rgba(234, 223, 201, 0.9));
-  background-size: auto, auto, 36px 36px, 36px 36px, auto;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.grid-preview::before {
+.map-grid {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  min-height: 520px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.7), transparent 24rem),
+    radial-gradient(circle at 82% 80%, rgba(201, 176, 132, 0.14), transparent 28rem),
+    linear-gradient(135deg, #fbf7ee 0%, var(--paper) 56%, var(--paper-deep) 100%);
+}
+
+.map-canvas {
   position: absolute;
-  inset: 18px;
+  inset: 0;
+  overflow: hidden;
+  background-color: #f8f2e7;
+  background-image:
+    linear-gradient(rgba(86, 64, 35, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(86, 64, 35, 0.22) 1px, transparent 1px),
+    linear-gradient(rgba(86, 64, 35, 0.095) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(86, 64, 35, 0.095) 1px, transparent 1px);
+  background-position:
+    var(--grid-origin-x) var(--grid-origin-y),
+    var(--grid-origin-x) var(--grid-origin-y),
+    var(--grid-origin-x) var(--grid-origin-y),
+    var(--grid-origin-x) var(--grid-origin-y);
+  background-size:
+    var(--grid-major) var(--grid-major),
+    var(--grid-major) var(--grid-major),
+    var(--grid-cell) var(--grid-cell),
+    var(--grid-cell) var(--grid-cell);
+  cursor: grab;
+  outline: none;
+  touch-action: none;
+  user-select: none;
+}
+
+.map-canvas::before,
+.map-canvas::after {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
   content: "";
-  border: 1px dashed rgba(47, 40, 31, 0.22);
 }
 
-.distance-ring {
+.map-canvas::before {
+  background-image:
+    radial-gradient(circle, rgba(72, 54, 31, 0.09) 0 0.7px, transparent 0.8px),
+    radial-gradient(circle, rgba(72, 54, 31, 0.05) 0 0.8px, transparent 0.9px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.5) 0 0.8px, transparent 0.9px);
+  background-position: 0 0, 4px 6px, 2px 3px;
+  background-size: 9px 9px, 13px 13px, 7px 7px;
+  mix-blend-mode: multiply;
+  opacity: 0.58;
+}
+
+.map-canvas::after {
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.28), transparent 20rem),
+    radial-gradient(circle at 72% 74%, rgba(122, 92, 53, 0.08), transparent 24rem);
+}
+
+.map-canvas.is-dragging {
+  cursor: grabbing;
+}
+
+.axis-line,
+.map-range-ring,
+.map-origin-marker,
+.tick-label {
   position: absolute;
-  border: 1px solid rgba(125, 89, 50, 0.72);
-  border-radius: 999px;
-  transition: width 160ms ease, height 160ms ease;
-}
-
-.bearing-line {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 2px;
-  height: 78%;
-  background: linear-gradient(180deg, transparent, var(--accent) 22%, transparent);
-  transform-origin: center;
-  transition: transform 160ms ease;
-}
-
-.grid-origin {
-  position: relative;
   z-index: 1;
-  width: 14px;
-  height: 14px;
+  pointer-events: none;
+}
+
+.axis-line {
+  background: rgba(47, 40, 31, 0.5);
+}
+
+.x-axis {
+  right: 0;
+  left: 0;
+  height: 2px;
+}
+
+.y-axis {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+}
+
+.map-range-ring {
+  border: 1px dashed rgba(125, 89, 50, 0.46);
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+}
+
+.map-origin-marker {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
   border: 2px solid var(--accent);
   border-radius: 999px;
   background: var(--paper);
+  transform: translate(-50%, -50%);
 }
 
-.map-tools {
-  display: grid;
-  grid-template-columns: minmax(110px, 1fr) auto minmax(110px, 1fr);
-  gap: 12px;
-  align-items: center;
-}
-
-.map-readout {
-  margin: 0;
-  color: var(--ink);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 0.9rem;
+.tick-label {
+  padding: 3px 6px;
+  border: 1px solid rgba(125, 89, 50, 0.14);
+  border-radius: 999px;
+  color: rgba(47, 40, 31, 0.68);
+  background: rgba(255, 252, 244, 0.66);
+  font-size: 0.68rem;
   font-weight: 800;
-  text-align: center;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
-.range-control {
-  grid-column: 1 / -1;
+.x-tick {
+  top: 12px;
+  transform: translateX(-50%);
+}
+
+.y-tick {
+  left: 12px;
+  transform: translateY(-50%);
+}
+
+.compass-label {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(125, 89, 50, 0.2);
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(255, 252, 244, 0.78);
+  font-size: 0.86rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  pointer-events: none;
+}
+
+.compass-north {
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.compass-east {
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+}
+
+.compass-south {
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.compass-west {
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+}
+
+.map-hud,
+.coordinate-panel,
+.map-control-panel,
+.map-scale {
+  position: absolute;
+  z-index: 4;
+  border: 1px solid rgba(125, 89, 50, 0.2);
+  color: var(--ink);
+  background: rgba(255, 252, 244, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.map-hud {
+  top: 18px;
+  left: 18px;
+  display: grid;
+  max-width: min(360px, calc(100vw - 124px));
+  padding: 10px 13px;
+  border-radius: 2px;
+}
+
+.map-hud h1,
+.map-hud p {
+  max-width: none;
+  margin: 0;
+  color: inherit;
+  font-family: inherit;
+}
+
+.map-hud h1 {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: clamp(1.05rem, 2vw, 1.45rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coordinate-panel {
+  bottom: 18px;
+  left: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 2px;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.86rem;
+}
+
+.coordinate-panel span {
+  color: var(--muted);
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.coordinate-panel strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.map-control-panel {
+  right: 18px;
+  bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, 46px);
+  gap: 8px;
+  padding: 10px;
+  border-radius: 2px;
+}
+
+.map-button,
+.map-link {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--ink);
+  background: rgba(255, 252, 244, 0.62);
+  font-size: 0.95rem;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.map-button:hover,
+.map-link:hover {
+  background: var(--wash);
+}
+
+.map-button.wide,
+.map-link {
+  grid-column: span 2;
+}
+
+.map-scale {
+  right: 18px;
+  top: 18px;
+  display: grid;
+  gap: 5px;
+  min-width: 132px;
+  padding: 11px 12px;
+  border-radius: 2px;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.75rem;
+}
+
+.map-scale span {
+  display: block;
+  max-width: 100%;
+  height: 8px;
+  border-right: 2px solid var(--ink);
+  border-left: 2px solid var(--ink);
+  background: linear-gradient(var(--ink), var(--ink)) center / 100% 2px no-repeat;
+}
+
+.map-scale strong,
+.map-scale small {
+  font-variant-numeric: tabular-nums;
+}
+
+.map-scale small {
+  color: var(--muted);
 }
 
 code,
@@ -432,11 +677,64 @@ pre {
     border-bottom: 1px solid var(--line);
   }
 
-  .map-tools {
-    grid-template-columns: 1fr;
+  .map-grid {
+    min-height: 100dvh;
   }
 
-  .grid-preview {
-    min-height: 280px;
+  .map-hud {
+    top: 12px;
+    left: 12px;
+    max-width: calc(100vw - 84px);
+    padding: 12px;
+    border-radius: 15px;
+  }
+
+  .map-hud h1 {
+    font-size: 1.32rem;
+  }
+
+  .map-hud p:last-child {
+    font-size: 0.72rem;
+  }
+
+  .map-scale {
+    top: auto;
+    right: 12px;
+    bottom: 158px;
+    min-width: 104px;
+  }
+
+  .coordinate-panel {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    border-radius: 16px;
+  }
+
+  .map-control-panel {
+    right: 12px;
+    bottom: 66px;
+  }
+
+  .compass-label {
+    width: 34px;
+    height: 34px;
+    font-size: 0.75rem;
+  }
+
+  .compass-north {
+    top: 12px;
+  }
+
+  .compass-east {
+    right: 12px;
+  }
+
+  .compass-south {
+    bottom: 12px;
+  }
+
+  .compass-west {
+    left: 12px;
   }
 }
