@@ -2,7 +2,9 @@ import type { JSX } from "preact";
 import { useEffect, useRef, useState } from "react";
 
 type MapGridProps = {
+  mapId: string;
   mapName: string;
+  currentUserNickname: string;
 };
 
 type ViewState = {
@@ -19,6 +21,34 @@ type ViewportSize = {
 type Coordinate = {
   x: number;
   y: number;
+};
+
+type MapPoint = {
+  id: number;
+  mapId: string;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  addedByUserId: number;
+  addedByNickname: string;
+};
+
+type PointDraft = {
+  name: string;
+  x: string;
+  y: string;
+  z: string;
+};
+
+type PointListResponse = {
+  points?: MapPoint[];
+  error?: string;
+};
+
+type PointCreateResponse = {
+  point?: MapPoint;
+  error?: string;
 };
 
 type DragState = {
@@ -38,7 +68,7 @@ const minZoom = 0.32;
 const maxZoom = 2.8;
 const rangeRings = [500, 1000, 2000];
 
-export default function MapGrid({ mapName }: MapGridProps) {
+export default function MapGrid({ mapId, mapName, currentUserNickname }: MapGridProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const [view, setView] = useState<ViewState>({ panX: 0, panY: 0, zoom: 1 });
@@ -48,6 +78,11 @@ export default function MapGrid({ mapName }: MapGridProps) {
   }));
   const [isDragging, setIsDragging] = useState(false);
   const [pointerCoord, setPointerCoord] = useState<Coordinate | null>(null);
+  const [points, setPoints] = useState<MapPoint[]>([]);
+  const [isLoadingPoints, setIsLoadingPoints] = useState(true);
+  const [pointDraft, setPointDraft] = useState<PointDraft | null>(null);
+  const [pointError, setPointError] = useState<string | null>(null);
+  const [isSavingPoint, setIsSavingPoint] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -68,6 +103,47 @@ export default function MapGrid({ mapName }: MapGridProps) {
 
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let isActive = true;
+
+    async function loadPoints() {
+      setIsLoadingPoints(true);
+
+      try {
+        const response = await fetch(getPointsPath(mapId), { signal: controller.signal });
+        const payload = await response.json() as PointListResponse;
+
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Could not load points.");
+        }
+
+        if (isActive) {
+          setPoints(Array.isArray(payload.points) ? payload.points : []);
+        }
+      } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
+
+        if (isActive) {
+          setPointError(getErrorMessage(error, "Could not load points."));
+        }
+      } finally {
+        if (isActive) {
+          setIsLoadingPoints(false);
+        }
+      }
+    }
+
+    loadPoints();
+
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
+  }, [mapId]);
 
   const pixelsPerMeter = getPixelsPerMeter(view.zoom);
   const cellSize = baseCellPixels * view.zoom;
@@ -159,6 +235,69 @@ export default function MapGrid({ mapName }: MapGridProps) {
     setView({ panX: 0, panY: 0, zoom: 1 });
   }
 
+  function startPointDraft() {
+    const targetCoordinate = pointerCoord ??
+      screenToWorld(size.width / 2, size.height / 2, view, size);
+    setPointDraft({
+      name: "",
+      x: formatCoordinateInput(targetCoordinate.x),
+      y: formatCoordinateInput(targetCoordinate.y),
+      z: "0",
+    });
+    setPointError(null);
+  }
+
+  function updatePointDraft(field: keyof PointDraft, value: string) {
+    setPointDraft((currentDraft) => currentDraft ? { ...currentDraft, [field]: value } : null);
+  }
+
+  async function handlePointSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!pointDraft || isSavingPoint) {
+      return;
+    }
+
+    const nextPoint = {
+      name: pointDraft.name.trim(),
+      x: Number(pointDraft.x),
+      y: Number(pointDraft.y),
+      z: Number(pointDraft.z),
+    };
+
+    if (
+      !nextPoint.name || !Number.isFinite(nextPoint.x) || !Number.isFinite(nextPoint.y) ||
+      !Number.isFinite(nextPoint.z)
+    ) {
+      setPointError("Enter a point name and numeric X, Y, and Z coordinates.");
+      return;
+    }
+
+    setIsSavingPoint(true);
+    setPointError(null);
+
+    try {
+      const response = await fetch(getPointsPath(mapId), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(nextPoint),
+      });
+      const payload = await response.json() as PointCreateResponse;
+      const savedPoint = payload.point;
+
+      if (!response.ok || !savedPoint) {
+        throw new Error(payload.error ?? "Could not save point.");
+      }
+
+      setPoints((currentPoints) => [...currentPoints, savedPoint]);
+      setPointDraft(null);
+    } catch (error) {
+      setPointError(getErrorMessage(error, "Could not save point."));
+    } finally {
+      setIsSavingPoint(false);
+    }
+  }
+
   function getEventCoordinate(
     event: JSX.TargetedPointerEvent<HTMLDivElement>,
     currentView: ViewState,
@@ -231,8 +370,28 @@ export default function MapGrid({ mapName }: MapGridProps) {
         <div
           className="map-origin-marker"
           style={{ left: `${origin.x}px`, top: `${origin.y}px` }}
-          aria-label="Origin at X 0, Y 0"
+          aria-label="Origin at (0, 0, 0)"
         />
+
+        {points.map((point) => {
+          const screen = worldToScreen(point, view, size);
+
+          return (
+            <div
+              key={point.id}
+              className="point-marker"
+              style={{ left: `${screen.x}px`, top: `${screen.y}px` }}
+              role="img"
+              aria-label={`${point.name} at ${formatCoordinateTuple(point, point.z)}`}
+            >
+              <span className="point-marker-dot" aria-hidden="true" />
+              <span className="point-marker-label">
+                <strong>{point.name}</strong>
+                <small>{formatCoordinateTuple(point, point.z)}</small>
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       <div className="compass-label compass-north" aria-hidden="true">N</div>
@@ -246,8 +405,106 @@ export default function MapGrid({ mapName }: MapGridProps) {
 
       <div className="coordinate-panel" aria-live="polite">
         <span>{pointerCoord ? "Cursor" : "Center"}</span>
-        <strong>X {formatCoordinate(coordinate.x)}</strong>
-        <strong>Y {formatCoordinate(coordinate.y)}</strong>
+        <strong>{formatCoordinateTuple(coordinate, 0)}</strong>
+      </div>
+
+      <div className="point-panel" aria-label="Points of interest">
+        <div className="point-panel-header">
+          <div>
+            <span>POI</span>
+            <strong>{points.length === 1 ? "1 point" : `${points.length} points`}</strong>
+          </div>
+          <button type="button" className="map-button point-add-button" onClick={startPointDraft}>
+            Add point
+          </button>
+        </div>
+
+        <p className="point-user">Adding as {currentUserNickname}</p>
+
+        {pointDraft
+          ? (
+            <form className="point-form" onSubmit={handlePointSubmit}>
+              <label>
+                Name
+                <input
+                  name="name"
+                  maxLength={80}
+                  required
+                  autoFocus
+                  placeholder="Cabin cache"
+                  value={pointDraft.name}
+                  onInput={(event) => updatePointDraft("name", event.currentTarget.value)}
+                />
+              </label>
+              <div className="point-coordinate-grid">
+                <label>
+                  X
+                  <input
+                    name="x"
+                    type="number"
+                    step="any"
+                    required
+                    value={pointDraft.x}
+                    onInput={(event) => updatePointDraft("x", event.currentTarget.value)}
+                  />
+                </label>
+                <label>
+                  Y
+                  <input
+                    name="y"
+                    type="number"
+                    step="any"
+                    required
+                    value={pointDraft.y}
+                    onInput={(event) => updatePointDraft("y", event.currentTarget.value)}
+                  />
+                </label>
+                <label>
+                  Z
+                  <input
+                    name="z"
+                    type="number"
+                    step="any"
+                    required
+                    value={pointDraft.z}
+                    onInput={(event) => updatePointDraft("z", event.currentTarget.value)}
+                  />
+                </label>
+              </div>
+              <div className="point-form-actions">
+                <button type="submit" disabled={isSavingPoint}>
+                  {isSavingPoint ? "Saving..." : "Save point"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={isSavingPoint}
+                  onClick={() => setPointDraft(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )
+          : null}
+
+        {pointError ? <p className="point-message error" role="alert">{pointError}</p> : null}
+
+        {isLoadingPoints
+          ? <p className="point-message">Loading points...</p>
+          : points.length === 0
+          ? <p className="point-message">No points saved yet.</p>
+          : (
+            <ol className="point-list">
+              {points.map((point) => (
+                <li key={point.id}>
+                  <strong>{point.name}</strong>
+                  <span>{formatCoordinateTuple(point, point.z)}</span>
+                  <small>Added by {point.addedByNickname}</small>
+                </li>
+              ))}
+            </ol>
+          )}
       </div>
 
       <div className="map-control-panel" aria-label="Map controls">
@@ -376,9 +633,31 @@ function formatAxisValue(value: number, positiveLabel: string, negativeLabel: st
   return `${value > 0 ? positiveLabel : negativeLabel} ${Math.abs(value)}`;
 }
 
+function formatCoordinateTuple(coordinate: Coordinate, z: number): string {
+  return `(${formatCoordinate(coordinate.x)}, ${formatCoordinate(coordinate.y)}, ${
+    formatCoordinate(z)
+  })`;
+}
+
 function formatCoordinate(value: number): string {
   const rounded = Math.round(value);
-  return rounded > 0 ? `+${rounded}` : `${rounded}`;
+  return `${rounded}`;
+}
+
+function formatCoordinateInput(value: number): string {
+  return String(Math.round(value));
+}
+
+function getPointsPath(mapId: string): string {
+  return `/map/${encodeURIComponent(mapId)}/points`;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 function clamp(value: number, min: number, max: number): number {

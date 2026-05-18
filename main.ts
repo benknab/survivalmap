@@ -20,7 +20,14 @@ import type {
   JoinMapFieldErrors,
 } from "./components/ui.tsx";
 import { db } from "./src/db.ts";
-import { type MapRecord, maps, type UserRecord, users } from "./src/schema.ts";
+import {
+  type MapRecord,
+  maps,
+  point,
+  type PointRecord,
+  type UserRecord,
+  users,
+} from "./src/schema.ts";
 
 const userCookieName = "survivalmap_users";
 const userCookieMaxAgeSeconds = 60 * 60 * 24 * 365 * 20;
@@ -55,8 +62,25 @@ const addUserSchema = z.object({
   nickname: nicknameSchema,
 });
 
+const pointCoordinateSchema = z.number()
+  .finite("Coordinate must be a finite number.")
+  .min(-1_000_000, "Coordinate is too small.")
+  .max(1_000_000, "Coordinate is too large.");
+
+const addPointSchema = z.object({
+  name: z.string()
+    .trim()
+    .min(1, "Point name is required.")
+    .max(80, "Point name must be 80 characters or fewer."),
+  x: pointCoordinateSchema,
+  y: pointCoordinateSchema,
+  z: pointCoordinateSchema,
+});
+
 type CreateMapInput = z.infer<typeof createMapSchema>;
 type AddUserInput = z.infer<typeof addUserSchema>;
+type AddPointInput = z.infer<typeof addPointSchema>;
+type PointResponse = PointRecord & { addedByNickname: string };
 
 export const app = new App()
   .use(staticFiles())
@@ -124,6 +148,39 @@ export const app = new App()
     }
 
     return ctx.redirect(`/map/${map.id}`, 303);
+  })
+  .get("/map/:id/points", async (ctx) => {
+    const map = await getMap(ctx.params.id);
+
+    if (!map) {
+      return Response.json({ error: "Map not found." }, { status: 404 });
+    }
+
+    return Response.json({ points: await getPointResponsesForMap(map.id) });
+  })
+  .post("/map/:id/points", async (ctx) => {
+    const map = await getMap(ctx.params.id);
+
+    if (!map) {
+      return Response.json({ error: "Map not found." }, { status: 404 });
+    }
+
+    const currentUser = await getCurrentUser(ctx.req.headers, map.id);
+
+    if (!currentUser) {
+      return Response.json({ error: "Choose who you are before adding points." }, { status: 401 });
+    }
+
+    const body = await getJsonBody(ctx.req);
+    const result = addPointSchema.safeParse(body);
+
+    if (!result.success) {
+      return Response.json({ error: "Point input is invalid." }, { status: 400 });
+    }
+
+    const pointRow = await addPoint(map.id, currentUser.id, result.data);
+
+    return Response.json({ point: getPointResponse(pointRow, currentUser) }, { status: 201 });
   })
   .get("/map/:id", async (ctx) => {
     const map = await getMap(ctx.params.id);
@@ -284,6 +341,21 @@ async function addUser(mapId: string, input: AddUserInput): Promise<UserRecord> 
   }).returning().get();
 }
 
+async function addPoint(
+  mapId: string,
+  userId: number,
+  input: AddPointInput,
+): Promise<PointRecord> {
+  return await db.insert(point).values({
+    mapId,
+    name: input.name,
+    x: input.x,
+    y: input.y,
+    z: input.z,
+    addedByUserId: userId,
+  }).returning().get();
+}
+
 async function getMap(id: string): Promise<MapRecord | undefined> {
   return await db.select().from(maps).where(eq(maps.id, id)).get();
 }
@@ -291,6 +363,27 @@ async function getMap(id: string): Promise<MapRecord | undefined> {
 async function getUsersForMap(mapId: string): Promise<UserRecord[]> {
   const userRows = await db.select().from(users).where(eq(users.mapId, mapId)).all();
   return [...userRows].sort(compareUsers);
+}
+
+async function getPointsForMap(mapId: string): Promise<PointRecord[]> {
+  const pointRows = await db.select().from(point).where(eq(point.mapId, mapId)).all();
+  return [...pointRows].sort((left, right) => left.id - right.id);
+}
+
+async function getPointResponsesForMap(mapId: string): Promise<PointResponse[]> {
+  const [pointRows, userRows] = await Promise.all([getPointsForMap(mapId), getUsersForMap(mapId)]);
+  const usersById = new Map(userRows.map((user) => [user.id, user]));
+
+  return pointRows.map((pointRow) =>
+    getPointResponse(pointRow, usersById.get(pointRow.addedByUserId))
+  );
+}
+
+function getPointResponse(pointRow: PointRecord, addedByUser?: UserRecord): PointResponse {
+  return {
+    ...pointRow,
+    addedByNickname: addedByUser?.nickname ?? "Unknown",
+  };
 }
 
 async function getUserForMap(mapId: string, userId: number): Promise<UserRecord | undefined> {
@@ -318,6 +411,14 @@ function compareUsers(left: UserRecord, right: UserRecord): number {
 
 function getFormString(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
+}
+
+async function getJsonBody(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    return undefined;
+  }
 }
 
 function getCreateMapFieldErrors(

@@ -409,6 +409,7 @@ button:hover,
 .axis-line,
 .map-range-ring,
 .map-origin-marker,
+.point-marker,
 .tick-label {
   position: absolute;
   z-index: 1;
@@ -446,6 +447,54 @@ button:hover,
   border-radius: 999px;
   background: var(--paper);
   transform: translate(-50%, -50%);
+}
+
+.point-marker {
+  z-index: 2;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  color: var(--ink);
+  filter: drop-shadow(0 4px 10px rgba(47, 40, 31, 0.16));
+  transform: translate(-9px, -50%);
+}
+
+.point-marker-dot {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff9ec;
+  border-radius: 999px;
+  background: #9b3d2e;
+  box-shadow: 0 0 0 2px rgba(47, 40, 31, 0.72);
+}
+
+.point-marker-label {
+  display: grid;
+  max-width: 180px;
+  gap: 2px;
+  padding: 5px 7px;
+  border: 1px solid rgba(125, 89, 50, 0.18);
+  border-radius: 2px;
+  background: rgba(255, 252, 244, 0.82);
+  line-height: 1.1;
+}
+
+.point-marker-label strong,
+.point-marker-label small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.point-marker-label strong {
+  font-size: 0.82rem;
+}
+
+.point-marker-label small {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .tick-label {
@@ -513,6 +562,7 @@ button:hover,
 
 .map-hud,
 .coordinate-panel,
+.point-panel,
 .map-control-panel,
 .map-scale {
   position: absolute;
@@ -573,6 +623,128 @@ button:hover,
 
 .coordinate-panel strong {
   font-variant-numeric: tabular-nums;
+}
+
+.point-panel {
+  top: 76px;
+  left: 18px;
+  display: grid;
+  width: min(340px, calc(100vw - 36px));
+  max-height: calc(100dvh - 176px);
+  gap: 10px;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 2px;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.84rem;
+}
+
+.point-panel-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.point-panel-header div {
+  display: grid;
+  gap: 2px;
+}
+
+.point-panel-header span,
+.point-user,
+.point-list small,
+.point-message {
+  color: var(--muted);
+}
+
+.point-panel-header span {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.point-panel-header strong {
+  font-size: 1rem;
+}
+
+.point-add-button {
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.point-user,
+.point-message {
+  max-width: none;
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.point-message.error {
+  color: var(--error);
+}
+
+.point-form {
+  gap: 10px;
+  margin-top: 0;
+}
+
+.point-form input {
+  height: 38px;
+  padding: 0 10px;
+}
+
+.point-coordinate-grid,
+.point-form-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.point-coordinate-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.point-form-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.point-form-actions button {
+  min-height: 40px;
+}
+
+.point-list {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.point-list li {
+  display: grid;
+  gap: 3px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(125, 89, 50, 0.18);
+}
+
+.point-list strong,
+.point-list span,
+.point-list small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.point-list span,
+.point-list small {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
 }
 
 .map-control-panel {
@@ -709,6 +881,19 @@ pre {
     bottom: 12px;
     left: 12px;
     border-radius: 16px;
+  }
+
+  .point-panel {
+    top: 76px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: 36dvh;
+    border-radius: 16px;
+  }
+
+  .point-marker-label {
+    max-width: 132px;
   }
 
   .map-control-panel {

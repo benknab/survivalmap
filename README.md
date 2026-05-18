@@ -62,16 +62,20 @@ deno.json         Deno tasks, imports, lint, and format settings
 
 ## API
 
-- `POST /map` accepts form data with a `name`, validates it with Zod, creates a map, and redirects
-  to `/map/:id`.
+- `POST /map` accepts form data with a `name` and `nickname`, validates it with Zod, creates a map,
+  and redirects to `/map/:id`.
 - `GET /map/:id` renders a stored map.
+- `GET /map/:id/points` returns points for a map as JSON.
+- `POST /map/:id/points` accepts JSON with `name`, `x`, `y`, and `z`. The current selected user is
+  recorded as the person who added the point.
 
 Example:
 
 ```sh
 curl -i -X POST http://localhost:8000/map \
   -H "content-type: application/x-www-form-urlencoded" \
-  --data-urlencode "name=Livonia run"
+  --data-urlencode "name=Livonia run" \
+  --data-urlencode "nickname=Ranger"
 ```
 
 ## Framework Choice

@@ -136,7 +136,7 @@ export function UserSelectPage({ map, users, error }: UserSelectPageProps) {
 }
 
 export function MapPage(
-  { map }: MapPageProps,
+  { map, currentUser }: MapPageProps,
 ) {
   return (
     <>
@@ -144,7 +144,7 @@ export function MapPage(
         <title>{map.name} | Survival Map</title>
       </Head>
       <div className="map-page">
-        <MapGrid mapName={map.name} />
+        <MapGrid mapId={map.id} mapName={map.name} currentUserNickname={currentUser.nickname} />
       </div>
     </>
   );
