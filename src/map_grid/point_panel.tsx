@@ -1,6 +1,7 @@
 import type { JSX } from "preact";
+import { useState } from "react";
 import { AddUserForm } from "../components/forms/user_forms.tsx";
-import { PlusIcon } from "./icons.tsx";
+import { PlusIcon, UserPlusIcon } from "./icons.tsx";
 import { PointDraftEditor } from "./point_draft_editor.tsx";
 import { PointLists } from "./point_lists.tsx";
 import { SelectedPointCard } from "./selected_point_card.tsx";
@@ -57,6 +58,13 @@ type PointPanelProps = {
 };
 
 export function PointPanel(props: PointPanelProps): JSX.Element {
+  const hasAddUserError = Boolean(props.addUserError || props.addUserFieldErrors?.nickname);
+  const [isAddUserFormOpen, setAddUserFormOpen] = useState(hasAddUserError);
+
+  function toggleAddUserForm(): void {
+    setAddUserFormOpen((isOpen) => !isOpen);
+  }
+
   return (
     <div
       className="point-panel"
@@ -67,15 +75,28 @@ export function PointPanel(props: PointPanelProps): JSX.Element {
         <strong>
           {props.activePoints.length === 1 ? "1 point" : `${props.activePoints.length} points`}
         </strong>
-        <button
-          type="button"
-          className="map-icon-button point-add-button"
-          aria-label="Add point"
-          title="Add point"
-          onClick={props.onStartPointDraft}
-        >
-          <PlusIcon />
-        </button>
+        <div className="point-panel-actions">
+          <button
+            type="button"
+            className="map-icon-button point-add-button"
+            aria-label="Add point"
+            title="Add point"
+            onClick={props.onStartPointDraft}
+          >
+            <PlusIcon />
+          </button>
+          <button
+            type="button"
+            className="map-icon-button point-add-button"
+            aria-controls="map-member-form"
+            aria-expanded={isAddUserFormOpen}
+            aria-label={isAddUserFormOpen ? "Hide add member form" : "Show add member form"}
+            title={isAddUserFormOpen ? "Hide add member form" : "Add member"}
+            onClick={toggleAddUserForm}
+          >
+            <UserPlusIcon />
+          </button>
+        </div>
       </div>
       <MapMembersPanel
         mapId={props.mapId}
@@ -84,6 +105,7 @@ export function PointPanel(props: PointPanelProps): JSX.Element {
         members={props.members}
         addUserError={props.addUserError}
         addUserFieldErrors={props.addUserFieldErrors}
+        isAddUserFormOpen={isAddUserFormOpen}
       />
       {props.selectedPoint && props.pointEditDraft
         ? (
@@ -117,13 +139,22 @@ export function PointPanel(props: PointPanelProps): JSX.Element {
 }
 
 function MapMembersPanel(
-  { mapId, currentUserId, currentUserNickname, members, addUserError, addUserFieldErrors }: {
+  {
+    mapId,
+    currentUserId,
+    currentUserNickname,
+    members,
+    addUserError,
+    addUserFieldErrors,
+    isAddUserFormOpen,
+  }: {
     mapId: string;
     currentUserId: number;
     currentUserNickname: string;
     members: MapMember[];
     addUserError?: string;
     addUserFieldErrors?: AddUserFieldErrors;
+    isAddUserFormOpen: boolean;
   },
 ): JSX.Element {
   const memberCount = members.length === 1 ? "1 member" : `${members.length} members`;
@@ -143,11 +174,13 @@ function MapMembersPanel(
           </li>
         ))}
       </ul>
-      <AddUserForm
-        action={`/map/${mapId}/users`}
-        error={addUserError}
-        fieldErrors={addUserFieldErrors}
-      />
+      <div id="map-member-form" className="map-member-form" hidden={!isAddUserFormOpen}>
+        <AddUserForm
+          action={`/map/${mapId}/users`}
+          error={addUserError}
+          fieldErrors={addUserFieldErrors}
+        />
+      </div>
     </section>
   );
 }

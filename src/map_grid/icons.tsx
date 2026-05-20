@@ -30,6 +30,17 @@ export function PlusIcon(): JSX.Element {
   );
 }
 
+export function UserPlusIcon(): JSX.Element {
+  return (
+    <svg className="map-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+      <path d="M18 8v8" />
+      <path d="M14 12h8" />
+    </svg>
+  );
+}
+
 export function MinusIcon(): JSX.Element {
   return (
     <svg className="map-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
