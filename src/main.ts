@@ -20,6 +20,7 @@ import type {
   JoinMapFieldErrors,
 } from "./components/ui.tsx";
 import { db } from "./db.ts";
+import { pointColorValues, pointEmojiValues } from "./point_style.ts";
 import { type MapRecord, maps, point, type PointRecord, type UserRecord, users } from "./schema.ts";
 
 const userCookieName = "survivalmap_users";
@@ -65,6 +66,8 @@ const addPointSchema = z.object({
     .trim()
     .min(1, "Point name is required.")
     .max(80, "Point name must be 80 characters or fewer."),
+  emoji: z.enum(pointEmojiValues),
+  color: z.enum(pointColorValues),
   x: pointCoordinateSchema,
   y: pointCoordinateSchema,
   z: pointCoordinateSchema,
@@ -392,6 +395,8 @@ async function addPoint(
   return await db.insert(point).values({
     mapId,
     name: input.name,
+    emoji: input.emoji,
+    color: input.color,
     x: input.x,
     y: input.y,
     z: input.z,

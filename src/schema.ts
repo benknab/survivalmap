@@ -1,4 +1,5 @@
 import { integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { defaultPointColor, defaultPointEmoji } from "./point_style.ts";
 
 export const maps = sqliteTable("map", {
   id: text("id").primaryKey(),
@@ -17,6 +18,8 @@ export const point = sqliteTable("point", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   mapId: text("map_id").notNull().references(() => maps.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  emoji: text("emoji").notNull().default(defaultPointEmoji),
+  color: text("color").notNull().default(defaultPointColor),
   x: real("x").notNull(),
   y: real("y").notNull(),
   z: real("z").notNull(),

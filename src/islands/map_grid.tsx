@@ -7,6 +7,12 @@ import {
 } from "@tanstack/react-query";
 import type { ComponentChildren, FunctionComponent, JSX } from "preact";
 import { useEffect, useRef, useState } from "react";
+import {
+  defaultPointColor,
+  defaultPointEmoji,
+  pointColorOptions,
+  pointEmojiOptions,
+} from "../point_style.ts";
 
 type MapGridProps = {
   mapId: string;
@@ -39,6 +45,8 @@ type MapPoint = {
   id: number;
   mapId: string;
   name: string;
+  emoji: string;
+  color: string;
   x: number;
   y: number;
   z: number;
@@ -52,6 +60,8 @@ type PointFormMode = "bearing" | "manual";
 type PointDraft = {
   formMode: PointFormMode;
   name: string;
+  emoji: string;
+  color: string;
   x: string;
   y: string;
   z: string;
@@ -65,6 +75,8 @@ type PointDraftTextField = Exclude<keyof PointDraft, "formMode" | "relativePoint
 
 type PointInput = {
   name: string;
+  emoji: string;
+  color: string;
   x: number;
   y: number;
   z: number;
@@ -297,6 +309,8 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     setPointDraft({
       formMode: "bearing",
       name: "",
+      emoji: defaultPointEmoji,
+      color: defaultPointColor,
       x: formatCoordinateInput(targetCoordinate.x),
       y: formatCoordinateInput(targetCoordinate.y),
       z: "0",
@@ -358,6 +372,8 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
 
     const nextPoint = {
       name: pointDraft.name.trim(),
+      emoji: pointDraft.emoji,
+      color: pointDraft.color,
       x: Number(pointDraft.x),
       y: Number(pointDraft.y),
       z: Number(pointDraft.z),
@@ -391,6 +407,8 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
 
     const nextPoint = {
       name: pointDraft.name.trim(),
+      emoji: pointDraft.emoji,
+      color: pointDraft.color,
       x: relativeResult.coordinate.x,
       y: relativeResult.coordinate.y,
       z: Number(pointDraft.z),
@@ -461,11 +479,15 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
               className="point-marker"
               style={{ left: `${screen.x}px`, top: `${screen.y}px` }}
               role="img"
-              aria-label={`${point.name} at ${formatCoordinateTuple(point, point.z)}`}
+              aria-label={`${formatPointName(point)} at ${formatCoordinateTuple(point, point.z)}`}
             >
-              <span className="point-marker-dot" aria-hidden="true" />
+              <span
+                className="point-marker-dot"
+                style={{ backgroundColor: point.color }}
+                aria-hidden="true"
+              />
               <span className="point-marker-label">
-                <strong>{point.name}</strong>
+                <strong>{formatPointName(point)}</strong>
                 <small>{formatCoordinateTuple(point, point.z)}</small>
               </span>
             </div>
@@ -547,6 +569,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
                         onInput={(event) => updatePointDraft("name", event.currentTarget.value)}
                       />
                     </label>
+                    <PointStylePicker draft={pointDraft} onChange={updatePointDraft} />
                     <div className="point-typeahead-field">
                       <label htmlFor="relative-point-query">Looking at saved point</label>
                       <div className="point-typeahead">
@@ -590,7 +613,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
                                       selectRelativePoint(point);
                                     }}
                                   >
-                                    <strong>{point.name}</strong>
+                                    <strong>{formatPointName(point)}</strong>
                                     <span>{formatCoordinateTuple(point, point.z)}</span>
                                   </button>
                                 ))
@@ -678,6 +701,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
                         onInput={(event) => updatePointDraft("name", event.currentTarget.value)}
                       />
                     </label>
+                    <PointStylePicker draft={pointDraft} onChange={updatePointDraft} />
                     <div className="point-coordinate-grid">
                       <label>
                         X
@@ -753,7 +777,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
                   <li key={point.id}>
                     <div className="point-list-details">
                       <div className="point-list-title">
-                        <strong>{point.name}</strong>
+                        <strong>{formatPointName(point)}</strong>
                         <small>({point.addedByNickname})</small>
                       </div>
                       <span>{formatCoordinateTuple(point, point.z)}</span>
@@ -788,7 +812,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
                     <li key={point.id}>
                       <div className="point-list-details">
                         <div className="point-list-title">
-                          <strong>{point.name}</strong>
+                          <strong>{formatPointName(point)}</strong>
                           <small>({point.addedByNickname})</small>
                         </div>
                         <span>{formatCoordinateTuple(point, point.z)}</span>
@@ -860,6 +884,54 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
   );
 }
 
+type PointStylePickerProps = {
+  draft: PointDraft;
+  onChange: (field: PointDraftTextField, value: string) => void;
+};
+
+function PointStylePicker({ draft, onChange }: PointStylePickerProps) {
+  return (
+    <div className="point-style-picker">
+      <div>
+        <span className="point-picker-label">Emoji</span>
+        <div className="point-picker-options" role="group" aria-label="Point emoji">
+          {pointEmojiOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className="point-picker-button point-emoji-picker-button"
+              aria-label={`${option.label} emoji`}
+              aria-pressed={draft.emoji === option.value}
+              title={option.label}
+              onClick={() => onChange("emoji", option.value)}
+            >
+              {option.value}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <span className="point-picker-label">Color</span>
+        <div className="point-picker-options" role="group" aria-label="Point color">
+          {pointColorOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className="point-picker-button point-color-picker-button"
+              aria-label={`${option.label} point color`}
+              aria-pressed={draft.color === option.value}
+              title={option.label}
+              onClick={() => onChange("color", option.value)}
+            >
+              <span style={{ backgroundColor: option.value }} aria-hidden="true" />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function getPixelsPerMeter(zoom: number): number {
   return (baseCellPixels * zoom) / cellMeters;
 }
@@ -924,6 +996,10 @@ function formatCoordinate(value: number): string {
 
 function formatCoordinateInput(value: number): string {
   return String(Math.round(value));
+}
+
+function formatPointName(point: Pick<MapPoint, "emoji" | "name">): string {
+  return `${point.emoji} ${point.name}`;
 }
 
 function hasRelativePointInput(draft: PointDraft): boolean {
