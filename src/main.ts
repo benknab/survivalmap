@@ -76,8 +76,20 @@ const addPointSchema = z.object({
 const pointIdSchema = z.coerce.number().int().positive();
 
 const updatePointSchema = z.object({
-  deleted: z.boolean(),
-});
+  deleted: z.boolean().optional(),
+  name: z.string()
+    .trim()
+    .min(1, "Point name is required.")
+    .max(80, "Point name must be 80 characters or fewer.")
+    .optional(),
+  emoji: z.enum(pointEmojiValues).optional(),
+  color: z.enum(pointColorValues).optional(),
+}).refine(
+  (input) =>
+    input.deleted !== undefined || input.name !== undefined || input.emoji !== undefined ||
+    input.color !== undefined,
+  "Point update is empty.",
+);
 
 type CreateMapInput = z.infer<typeof createMapSchema>;
 type AddUserInput = z.infer<typeof addUserSchema>;
@@ -409,9 +421,28 @@ async function updatePoint(
   pointId: number,
   input: UpdatePointInput,
 ): Promise<PointRecord | undefined> {
-  return await db.update(point).set({
-    deletedAt: input.deleted ? new Date().toISOString() : null,
-  }).where(and(eq(point.mapId, mapId), eq(point.id, pointId))).returning().get();
+  const values: Partial<Pick<PointRecord, "deletedAt" | "name" | "emoji" | "color">> = {};
+
+  if (input.deleted !== undefined) {
+    values.deletedAt = input.deleted ? new Date().toISOString() : null;
+  }
+
+  if (input.name !== undefined) {
+    values.name = input.name;
+  }
+
+  if (input.emoji !== undefined) {
+    values.emoji = input.emoji;
+  }
+
+  if (input.color !== undefined) {
+    values.color = input.color;
+  }
+
+  return await db.update(point).set(values).where(
+    and(eq(point.mapId, mapId), eq(point.id, pointId)),
+  )
+    .returning().get();
 }
 
 async function getMap(id: string): Promise<MapRecord | undefined> {

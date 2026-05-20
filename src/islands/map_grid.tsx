@@ -71,7 +71,10 @@ type PointDraft = {
   relativeDistance: string;
 };
 
+type PointEditDraft = Pick<PointDraft, "name" | "emoji" | "color">;
 type PointDraftTextField = Exclude<keyof PointDraft, "formMode" | "relativePointId">;
+type PointEditField = keyof PointEditDraft;
+type PointStyleField = "emoji" | "color";
 
 type PointInput = {
   name: string;
@@ -80,6 +83,12 @@ type PointInput = {
   x: number;
   y: number;
   z: number;
+};
+
+type PointEditInput = PointEditDraft;
+
+type PointPatchInput = Partial<PointEditInput> & {
+  deleted?: boolean;
 };
 
 type PointListResponse = {
@@ -145,6 +154,9 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
   const [pointDraft, setPointDraft] = useState<PointDraft | null>(null);
+  const [selectedPointId, setSelectedPointId] = useState<number | null>(null);
+  const [pointEditDraft, setPointEditDraft] = useState<PointEditDraft | null>(null);
+  const [hoveredPointId, setHoveredPointId] = useState<number | null>(null);
   const [pointError, setPointError] = useState<string | null>(null);
   const [pendingPointIds, setPendingPointIds] = useState<number[]>([]);
   const [isRelativePointListOpen, setIsRelativePointListOpen] = useState(false);
@@ -166,17 +178,32 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
       setPointError(getErrorMessage(error, "Could not save point."));
     },
   });
+  const savePointEditMutation = useMutation({
+    mutationFn: ({ pointId, point }: { pointId: number; point: PointEditInput }) =>
+      updatePoint(mapId, pointId, point, "Could not update point."),
+    onSuccess: (updatedPoint) => {
+      cacheUpdatedPoint(updatedPoint);
+      setPointEditDraft(getPointEditDraft(updatedPoint));
+      setSelectedPointId(updatedPoint.id);
+    },
+    onError: (error) => {
+      setPointError(getErrorMessage(error, "Could not update point."));
+    },
+  });
   const updatePointMutation = useMutation({
     mutationFn: ({ pointId, deleted }: { pointId: number; deleted: boolean }) =>
-      updatePointDeletedState(mapId, pointId, deleted),
+      updatePoint(
+        mapId,
+        pointId,
+        { deleted },
+        `Could not ${deleted ? "remove" : "restore"} point.`,
+      ),
     onSuccess: (updatedPoint) => {
-      queryClient.setQueryData<MapPoint[]>(
-        pointsQueryKey,
-        (currentPoints) =>
-          currentPoints?.map((point) => point.id === updatedPoint.id ? updatedPoint : point) ?? [
-            updatedPoint,
-          ],
-      );
+      cacheUpdatedPoint(updatedPoint);
+
+      if (updatedPoint.deletedAt) {
+        setSelectedPointId((currentId) => currentId === updatedPoint.id ? null : currentId);
+      }
     },
     onError: (error, { deleted }) => {
       setPointError(getErrorMessage(error, `Could not ${deleted ? "remove" : "restore"} point.`));
@@ -185,6 +212,16 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
       setPendingPointIds((currentIds) => currentIds.filter((id) => id !== pointId));
     },
   });
+
+  function cacheUpdatedPoint(updatedPoint: MapPoint) {
+    queryClient.setQueryData<MapPoint[]>(
+      pointsQueryKey,
+      (currentPoints) =>
+        currentPoints?.map((point) => point.id === updatedPoint.id ? updatedPoint : point) ?? [
+          updatedPoint,
+        ],
+    );
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -211,6 +248,9 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
   const points = pointsQuery.data ?? [];
   const activePoints = points.filter((point) => !point.deletedAt);
   const deletedPoints = points.filter((point) => point.deletedAt);
+  const selectedPoint = selectedPointId === null
+    ? null
+    : activePoints.find((point) => point.id === selectedPointId) ?? null;
   const relativePointResult = pointDraft?.formMode === "bearing"
     ? getRelativePointResult(pointDraft, activePoints)
     : null;
@@ -306,6 +346,8 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
   function startPointDraft() {
     const targetCoordinate = cursorPosition?.coordinate ??
       screenToWorld(size.width / 2, size.height / 2, view, size);
+    setSelectedPointId(null);
+    setPointEditDraft(null);
     setPointDraft({
       formMode: "bearing",
       name: "",
@@ -358,9 +400,60 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     setIsRelativePointListOpen(false);
   }
 
+  function selectPoint(point: MapPoint) {
+    setIsDrawerOpen(true);
+    setPointDraft(null);
+    setIsRelativePointListOpen(false);
+    setSelectedPointId(point.id);
+    setPointEditDraft(getPointEditDraft(point));
+    setPointError(null);
+    setView((currentView) => centerViewOnCoordinate(currentView, point));
+  }
+
+  function updatePointEditDraft(field: PointEditField, value: string) {
+    setPointEditDraft((currentDraft) => currentDraft ? { ...currentDraft, [field]: value } : null);
+  }
+
+  function resetPointEditDraft() {
+    if (!selectedPoint) {
+      return;
+    }
+
+    setPointEditDraft(getPointEditDraft(selectedPoint));
+    setPointError(null);
+  }
+
+  function clearPointSelection() {
+    setSelectedPointId(null);
+    setPointEditDraft(null);
+    setPointError(null);
+  }
+
   function cancelPointDraft() {
     setPointDraft(null);
     setIsRelativePointListOpen(false);
+  }
+
+  function handlePointEditSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPoint || !pointEditDraft || savePointEditMutation.isPending) {
+      return;
+    }
+
+    const nextPoint = {
+      name: pointEditDraft.name.trim(),
+      emoji: pointEditDraft.emoji,
+      color: pointEditDraft.color,
+    };
+
+    if (!nextPoint.name) {
+      setPointError("Enter a point name.");
+      return;
+    }
+
+    setPointError(null);
+    savePointEditMutation.mutate({ pointId: selectedPoint.id, point: nextPoint });
   }
 
   function handleManualPointSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>) {
@@ -472,14 +565,28 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
 
         {activePoints.map((point) => {
           const screen = worldToScreen(point, view, size);
+          const isSelected = selectedPointId === point.id;
 
           return (
-            <div
+            <button
               key={point.id}
-              className="point-marker"
-              style={{ left: `${screen.x}px`, top: `${screen.y}px` }}
-              role="img"
+              type="button"
+              className={`point-marker${isSelected ? " is-selected" : ""}`}
+              style={{
+                left: `${screen.x}px`,
+                top: `${screen.y}px`,
+                zIndex: getPointZIndex(point.id, selectedPointId, hoveredPointId),
+              }}
               aria-label={`${formatPointName(point)} at ${formatCoordinateTuple(point, point.z)}`}
+              aria-pressed={isSelected}
+              onClick={() => selectPoint(point)}
+              onFocus={() => setHoveredPointId(point.id)}
+              onBlur={() =>
+                setHoveredPointId((currentId) => currentId === point.id ? null : currentId)}
+              onPointerDown={(event) => event.stopPropagation()}
+              onPointerEnter={() => setHoveredPointId(point.id)}
+              onPointerLeave={() =>
+                setHoveredPointId((currentId) => currentId === point.id ? null : currentId)}
             >
               <span
                 className="point-marker-dot"
@@ -490,7 +597,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
                 <strong>{formatPointName(point)}</strong>
                 <small>{formatCoordinateTuple(point, point.z)}</small>
               </span>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -525,6 +632,53 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
             <PlusIcon />
           </button>
         </div>
+
+        {selectedPoint && pointEditDraft
+          ? (
+            <section className="point-selected-card" aria-label="Selected point">
+              <div className="point-selected-header">
+                <span>Selected</span>
+                <button
+                  type="button"
+                  className="point-selected-close"
+                  onClick={clearPointSelection}
+                >
+                  Deselect
+                </button>
+              </div>
+              <form className="point-form" onSubmit={handlePointEditSubmit}>
+                <label>
+                  Name
+                  <input
+                    name="selectedName"
+                    maxLength={80}
+                    required
+                    value={pointEditDraft.name}
+                    onInput={(event) => updatePointEditDraft("name", event.currentTarget.value)}
+                  />
+                </label>
+                <PointStylePicker draft={pointEditDraft} onChange={updatePointEditDraft} />
+                <p className="point-selected-coordinate">
+                  {formatCoordinateTuple(selectedPoint, selectedPoint.z)} by{" "}
+                  {selectedPoint.addedByNickname}
+                </p>
+                <div className="point-form-actions">
+                  <button type="submit" disabled={savePointEditMutation.isPending}>
+                    {savePointEditMutation.isPending ? "Saving..." : "Save changes"}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={savePointEditMutation.isPending}
+                    onClick={resetPointEditDraft}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </form>
+            </section>
+          )
+          : null}
 
         {pointDraft
           ? (
@@ -772,16 +926,24 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
             <ol className="point-list">
               {activePoints.map((point) => {
                 const isPending = pendingPointIds.includes(point.id);
+                const isSelected = selectedPointId === point.id;
 
                 return (
-                  <li key={point.id}>
-                    <div className="point-list-details">
-                      <div className="point-list-title">
-                        <strong>{formatPointName(point)}</strong>
-                        <small>({point.addedByNickname})</small>
+                  <li key={point.id} className={isSelected ? "is-selected" : ""}>
+                    <button
+                      type="button"
+                      className="point-list-select"
+                      aria-current={isSelected ? "true" : undefined}
+                      onClick={() => selectPoint(point)}
+                    >
+                      <div className="point-list-details">
+                        <div className="point-list-title">
+                          <strong>{formatPointName(point)}</strong>
+                          <small>({point.addedByNickname})</small>
+                        </div>
+                        <span>{formatCoordinateTuple(point, point.z)}</span>
                       </div>
-                      <span>{formatCoordinateTuple(point, point.z)}</span>
-                    </div>
+                    </button>
                     <button
                       type="button"
                       className="point-action-button remove"
@@ -885,8 +1047,8 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
 }
 
 type PointStylePickerProps = {
-  draft: PointDraft;
-  onChange: (field: PointDraftTextField, value: string) => void;
+  draft: Pick<PointEditDraft, "emoji" | "color">;
+  onChange: (field: PointStyleField, value: string) => void;
 };
 
 function PointStylePicker({ draft, onChange }: PointStylePickerProps) {
@@ -956,6 +1118,16 @@ function zoomView(
   };
 }
 
+function centerViewOnCoordinate(view: ViewState, coordinate: Coordinate): ViewState {
+  const pixelsPerMeter = getPixelsPerMeter(view.zoom);
+
+  return {
+    ...view,
+    panX: -coordinate.x * pixelsPerMeter,
+    panY: coordinate.y * pixelsPerMeter,
+  };
+}
+
 function screenToWorld(
   screenX: number,
   screenY: number,
@@ -1000,6 +1172,26 @@ function formatCoordinateInput(value: number): string {
 
 function formatPointName(point: Pick<MapPoint, "emoji" | "name">): string {
   return `${point.emoji} ${point.name}`;
+}
+
+function getPointEditDraft(point: MapPoint): PointEditDraft {
+  return {
+    name: point.name,
+    emoji: point.emoji,
+    color: point.color,
+  };
+}
+
+function getPointZIndex(
+  pointId: number,
+  selectedPointId: number | null,
+  hoveredPointId: number | null,
+): number {
+  if (hoveredPointId === pointId) {
+    return 30;
+  }
+
+  return selectedPointId === pointId ? 20 : 2;
 }
 
 function hasRelativePointInput(draft: PointDraft): boolean {
@@ -1182,24 +1374,25 @@ async function createPoint(mapId: string, point: PointInput): Promise<MapPoint> 
   return savedPoint;
 }
 
-async function updatePointDeletedState(
+async function updatePoint(
   mapId: string,
   pointId: number,
-  deleted: boolean,
+  point: PointPatchInput,
+  fallback: string,
 ): Promise<MapPoint> {
   const response = await fetch(getPointPath(mapId, pointId), {
     method: "PATCH",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ deleted }),
+    body: JSON.stringify(point),
   });
   const payload = await readJsonResponse<PointUpdateResponse>(
     response,
-    `Could not ${deleted ? "remove" : "restore"} point.`,
+    fallback,
   );
   const updatedPoint = payload.point;
 
   if (!response.ok || !updatedPoint) {
-    throw new Error(payload.error ?? `Could not ${deleted ? "remove" : "restore"} point.`);
+    throw new Error(payload.error ?? fallback);
   }
 
   return updatedPoint;

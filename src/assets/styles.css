@@ -411,11 +411,11 @@ button:hover,
 .point-marker {
   position: absolute;
   z-index: 1;
-  pointer-events: none;
 }
 
 .axis-line {
   background: rgba(47, 40, 31, 0.34);
+  pointer-events: none;
 }
 
 .x-axis {
@@ -435,9 +435,33 @@ button:hover,
   display: flex;
   gap: 5px;
   align-items: center;
+  min-height: 0;
+  padding: 0;
+  border: 0;
   color: var(--ink);
+  background: transparent;
+  cursor: pointer;
   filter: drop-shadow(0 3px 8px rgba(47, 40, 31, 0.14));
+  pointer-events: auto;
+  text-align: left;
   transform: translate(-6px, -50%);
+}
+
+.point-marker:hover,
+.point-marker:focus-visible {
+  background: transparent;
+}
+
+.point-marker.is-selected .point-marker-dot {
+  box-shadow: 0 0 0 2px rgba(47, 40, 31, 0.68), 0 0 0 5px rgba(255, 252, 244, 0.88);
+}
+
+.point-marker:hover .point-marker-label,
+.point-marker:focus-visible .point-marker-label,
+.point-marker.is-selected .point-marker-label {
+  border-color: rgba(47, 40, 31, 0.38);
+  background: rgba(255, 252, 244, 0.96);
+  box-shadow: 0 8px 18px rgba(47, 40, 31, 0.16);
 }
 
 .point-marker-dot {
@@ -733,6 +757,54 @@ button:hover,
   color: var(--error);
 }
 
+.point-selected-card {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(125, 89, 50, 0.26);
+  border-radius: 6px;
+  background: rgba(255, 252, 244, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+.point-selected-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.point-selected-header span {
+  color: var(--accent);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.point-selected-close {
+  min-height: 24px;
+  padding: 0 8px;
+  border-color: rgba(125, 89, 50, 0.26);
+  border-radius: 999px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 0.58rem;
+}
+
+.point-selected-close:hover {
+  background: var(--wash);
+}
+
+.point-selected-coordinate {
+  max-width: none;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
 .point-form-actions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -756,6 +828,27 @@ button:hover,
   align-items: center;
   padding: 5px 0;
   border-top: 1px solid rgba(125, 89, 50, 0.18);
+}
+
+.point-list li.is-selected {
+  border-top-color: rgba(47, 40, 31, 0.34);
+}
+
+.point-list-select {
+  display: grid;
+  width: 100%;
+  min-height: 0;
+  padding: 5px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+}
+
+.point-list-select:hover,
+.point-list li.is-selected .point-list-select {
+  background: var(--wash);
 }
 
 .point-list-details {
