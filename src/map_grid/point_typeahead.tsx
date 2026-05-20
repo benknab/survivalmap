@@ -5,6 +5,7 @@ import type { MapPoint, PointDraft } from "./types.ts";
 
 type PointTypeaheadProps = {
   draft: PointDraft;
+  label: string;
   options: MapPoint[];
   isLoading: boolean;
   isOpen: boolean;
@@ -16,7 +17,7 @@ type PointTypeaheadProps = {
 export function PointTypeahead(props: PointTypeaheadProps): JSX.Element {
   return (
     <div className="point-typeahead-field">
-      <label htmlFor="relative-point-query">Looking at saved point</label>
+      <label htmlFor="relative-point-query">{props.label}</label>
       <div className="point-typeahead">
         <input
           id="relative-point-query"

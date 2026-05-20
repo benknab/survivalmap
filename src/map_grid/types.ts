@@ -53,6 +53,7 @@ export type MapPoint = {
 };
 
 export type PointFormMode = "bearing" | "manual";
+export type RelativeBearingOrigin = "new-point" | "saved-point";
 
 export type PointDraft = {
   formMode: PointFormMode;
@@ -62,6 +63,7 @@ export type PointDraft = {
   x: string;
   y: string;
   z: string;
+  relativeBearingOrigin: RelativeBearingOrigin;
   relativePointId: number | null;
   relativePointQuery: string;
   relativeBearing: string;
@@ -69,7 +71,10 @@ export type PointDraft = {
 };
 
 export type PointEditDraft = Pick<PointDraft, "name" | "emoji" | "color">;
-export type PointDraftTextField = Exclude<keyof PointDraft, "formMode" | "relativePointId">;
+export type PointDraftTextField = Exclude<
+  keyof PointDraft,
+  "formMode" | "relativePointId" | "relativeBearingOrigin"
+>;
 export type PointEditField = keyof PointEditDraft;
 export type PointStyleField = "emoji" | "color";
 

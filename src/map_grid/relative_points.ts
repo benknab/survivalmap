@@ -29,13 +29,17 @@ export function getRelativePointResult(
   }
 
   const bearingRadians = degreesToRadians(normalizeBearing(bearing));
+  const vector = {
+    x: Math.sin(bearingRadians) * distance,
+    y: Math.cos(bearingRadians) * distance,
+  };
+  const coordinate = draft.relativeBearingOrigin === "saved-point"
+    ? { x: point.x + vector.x, y: point.y + vector.y }
+    : { x: point.x - vector.x, y: point.y - vector.y };
 
   return {
     point,
-    coordinate: {
-      x: point.x - Math.sin(bearingRadians) * distance,
-      y: point.y - Math.cos(bearingRadians) * distance,
-    },
+    coordinate,
     error: null,
   };
 }

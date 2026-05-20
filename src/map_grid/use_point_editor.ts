@@ -10,6 +10,7 @@ import type {
   PointEditDraft,
   PointEditField,
   PointFormMode,
+  RelativeBearingOrigin,
 } from "./types.ts";
 
 type UsePointEditorResult = {
@@ -23,6 +24,7 @@ type UsePointEditorResult = {
   startPointDraft: (targetCoordinate: Coordinate) => void;
   updatePointDraft: (field: PointDraftTextField, value: string) => void;
   switchPointFormMode: (formMode: PointFormMode) => void;
+  switchRelativeBearingOrigin: (origin: RelativeBearingOrigin) => void;
   selectRelativePoint: (point: MapPoint) => void;
   selectPoint: (point: MapPoint) => void;
   updatePointEditDraft: (field: PointEditField, value: string) => void;
@@ -72,6 +74,13 @@ export function usePointEditor(): UsePointEditorResult {
 
   function switchPointFormMode(formMode: PointFormMode): void {
     setPointDraft((currentDraft) => currentDraft ? { ...currentDraft, formMode } : null);
+    setIsRelativePointListOpen(relativePointListClosed);
+  }
+
+  function switchRelativeBearingOrigin(origin: RelativeBearingOrigin): void {
+    setPointDraft((currentDraft) => {
+      return currentDraft ? { ...currentDraft, relativeBearingOrigin: origin } : null;
+    });
     setIsRelativePointListOpen(relativePointListClosed);
   }
 
@@ -155,6 +164,7 @@ export function usePointEditor(): UsePointEditorResult {
     startPointDraft,
     updatePointDraft,
     switchPointFormMode,
+    switchRelativeBearingOrigin,
     selectRelativePoint,
     selectPoint,
     updatePointEditDraft,

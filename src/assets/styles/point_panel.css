@@ -164,17 +164,20 @@
 }
 
 .point-form-tabs,
+.point-bearing-options,
 .point-coordinate-grid,
 .point-form-actions {
   display: grid;
   gap: 6px;
 }
 
-.point-form-tabs {
+.point-form-tabs,
+.point-bearing-options {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.point-form-tab {
+.point-form-tab,
+.point-bearing-option {
   min-height: 28px;
   border-color: rgba(125, 89, 50, 0.24);
   color: var(--ink);
@@ -182,11 +185,13 @@
   font-size: 0.62rem;
 }
 
-.point-form-tab:hover {
+.point-form-tab:hover,
+.point-bearing-option:hover {
   background: var(--wash);
 }
 
-.point-form-tab.active {
+.point-form-tab.active,
+.point-bearing-option.active {
   border-color: var(--ink);
   color: var(--paper);
   background: var(--ink);

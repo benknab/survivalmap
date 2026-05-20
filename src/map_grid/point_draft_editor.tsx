@@ -7,6 +7,7 @@ import type {
   PointDraft,
   PointDraftTextField,
   PointFormMode,
+  RelativeBearingOrigin,
 } from "./types.ts";
 
 type PointDraftEditorProps = {
@@ -21,6 +22,7 @@ type PointDraftEditorProps = {
   onManualSubmit: FormSubmitHandler;
   onDraftChange: (field: PointDraftTextField, value: string) => void;
   onSwitchMode: (formMode: PointFormMode) => void;
+  onSwitchBearingOrigin: (origin: RelativeBearingOrigin) => void;
   onCancel: () => void;
   onRelativePointListOpenChange: (isOpen: boolean) => void;
   onSelectRelativePoint: (point: MapPoint) => void;

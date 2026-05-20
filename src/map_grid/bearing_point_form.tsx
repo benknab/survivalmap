@@ -1,7 +1,13 @@
 import type { JSX } from "preact";
 import { PointStylePicker } from "./point_style_picker.tsx";
 import { PointTypeahead } from "./point_typeahead.tsx";
-import type { FormSubmitHandler, MapPoint, PointDraft, PointDraftTextField } from "./types.ts";
+import type {
+  FormSubmitHandler,
+  MapPoint,
+  PointDraft,
+  PointDraftTextField,
+  RelativeBearingOrigin,
+} from "./types.ts";
 
 type BearingPointFormProps = {
   draft: PointDraft;
@@ -13,18 +19,30 @@ type BearingPointFormProps = {
   isSaving: boolean;
   onSubmit: FormSubmitHandler;
   onDraftChange: (field: PointDraftTextField, value: string) => void;
+  onSwitchBearingOrigin: (origin: RelativeBearingOrigin) => void;
   onCancel: () => void;
   onRelativePointListOpenChange: (isOpen: boolean) => void;
   onSelectRelativePoint: (point: MapPoint) => void;
 };
 
 export function BearingPointForm(props: BearingPointFormProps): JSX.Element {
+  const isStandingAtSavedPoint = props.draft.relativeBearingOrigin === "saved-point";
+  const helpText = isStandingAtSavedPoint
+    ? "Stand at a saved point, look at the new point, then enter that compass bearing " +
+      "and estimated distance."
+    : "Stand at the new point, look at a saved point, then enter that compass bearing " +
+      "and estimated distance.";
+  const relativePointLabel = isStandingAtSavedPoint
+    ? "Standing at saved point"
+    : "Looking at saved point";
+
   return (
     <form className="point-form" onSubmit={props.onSubmit}>
-      <p className="point-relative-help">
-        Stand at the new point, look at a saved point, then enter that compass bearing and estimated
-        distance.
-      </p>
+      <BearingOriginPicker
+        selectedOrigin={props.draft.relativeBearingOrigin}
+        onChange={props.onSwitchBearingOrigin}
+      />
+      <p className="point-relative-help">{helpText}</p>
       <label>
         Name
         <input
@@ -40,6 +58,7 @@ export function BearingPointForm(props: BearingPointFormProps): JSX.Element {
       <PointStylePicker draft={props.draft} onChange={props.onDraftChange} />
       <PointTypeahead
         draft={props.draft}
+        label={relativePointLabel}
         options={props.relativePointOptions}
         isLoading={props.isLoadingPoints}
         isOpen={props.isRelativePointListOpen}
@@ -86,6 +105,52 @@ export function BearingPointForm(props: BearingPointFormProps): JSX.Element {
       {props.relativePointMessage ? <RelativePointMessage {...props} /> : null}
       <PointFormActions isSaving={props.isSaving} onCancel={props.onCancel} />
     </form>
+  );
+}
+
+function BearingOriginPicker(
+  { selectedOrigin, onChange }: {
+    selectedOrigin: RelativeBearingOrigin;
+    onChange: (origin: RelativeBearingOrigin) => void;
+  },
+): JSX.Element {
+  return (
+    <div className="point-bearing-options" role="group" aria-label="Bearing input direction">
+      <BearingOriginButton
+        origin="new-point"
+        label="Stand at new point"
+        selectedOrigin={selectedOrigin}
+        onChange={onChange}
+      />
+      <BearingOriginButton
+        origin="saved-point"
+        label="Stand at saved point"
+        selectedOrigin={selectedOrigin}
+        onChange={onChange}
+      />
+    </div>
+  );
+}
+
+function BearingOriginButton(
+  { origin, label, selectedOrigin, onChange }: {
+    origin: RelativeBearingOrigin;
+    label: string;
+    selectedOrigin: RelativeBearingOrigin;
+    onChange: (origin: RelativeBearingOrigin) => void;
+  },
+): JSX.Element {
+  const isSelected = selectedOrigin === origin;
+
+  return (
+    <button
+      type="button"
+      className={`point-bearing-option${isSelected ? " active" : ""}`}
+      aria-pressed={isSelected}
+      onClick={() => onChange(origin)}
+    >
+      {label}
+    </button>
   );
 }
 

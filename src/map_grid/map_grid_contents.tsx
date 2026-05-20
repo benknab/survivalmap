@@ -10,7 +10,7 @@ import {
   getRelativePointMessage,
   getRelativePointResult,
 } from "./relative_points.ts";
-import type { MapGridProps, MapPoint, PointFormMode } from "./types.ts";
+import type { MapGridProps, MapPoint, PointFormMode, RelativeBearingOrigin } from "./types.ts";
 import { useMapPoints } from "./use_map_points.ts";
 import { useMapView } from "./use_map_view.ts";
 import { usePointEditor } from "./use_point_editor.ts";
@@ -71,6 +71,11 @@ export function MapGridContents(
 
   function handleSwitchPointFormMode(formMode: PointFormMode): void {
     editor.switchPointFormMode(formMode);
+    mapPoints.setPointError(null);
+  }
+
+  function handleSwitchRelativeBearingOrigin(origin: RelativeBearingOrigin): void {
+    editor.switchRelativeBearingOrigin(origin);
     mapPoints.setPointError(null);
   }
 
@@ -140,6 +145,7 @@ export function MapGridContents(
         onPointDraftChange={editor.updatePointDraft}
         onPointEditChange={editor.updatePointEditDraft}
         onSwitchPointFormMode={handleSwitchPointFormMode}
+        onSwitchRelativeBearingOrigin={handleSwitchRelativeBearingOrigin}
         onSelectRelativePoint={editor.selectRelativePoint}
         onSelectPoint={handleSelectPoint}
         onClearPointSelection={handleClearPointSelection}

@@ -11,6 +11,7 @@ export function createPointDraft(targetCoordinate: Coordinate): PointDraft {
     x: formatCoordinateInput(targetCoordinate.x),
     y: formatCoordinateInput(targetCoordinate.y),
     z: "0",
+    relativeBearingOrigin: "new-point",
     relativePointId: null,
     relativePointQuery: "",
     relativeBearing: "",

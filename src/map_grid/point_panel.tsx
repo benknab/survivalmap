@@ -15,6 +15,7 @@ import type {
   PointEditDraft,
   PointEditField,
   PointFormMode,
+  RelativeBearingOrigin,
 } from "./types.ts";
 
 type PointPanelProps = {
@@ -48,6 +49,7 @@ type PointPanelProps = {
   onPointDraftChange: (field: PointDraftTextField, value: string) => void;
   onPointEditChange: (field: PointEditField, value: string) => void;
   onSwitchPointFormMode: (formMode: PointFormMode) => void;
+  onSwitchRelativeBearingOrigin: (origin: RelativeBearingOrigin) => void;
   onSelectRelativePoint: (point: MapPoint) => void;
   onSelectPoint: (point: MapPoint) => void;
   onClearPointSelection: () => void;
@@ -201,6 +203,7 @@ function PointPanelDraftEditor(
       onManualSubmit={props.onManualPointSubmit}
       onDraftChange={props.onPointDraftChange}
       onSwitchMode={props.onSwitchPointFormMode}
+      onSwitchBearingOrigin={props.onSwitchRelativeBearingOrigin}
       onCancel={props.onCancelPointDraft}
       onRelativePointListOpenChange={props.onRelativePointListOpenChange}
       onSelectRelativePoint={props.onSelectRelativePoint}
