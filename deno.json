@@ -14,6 +14,8 @@
   "imports": {
     "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@^1.1.2",
     "@libsql/client": "npm:@libsql/client@^0.17.3",
+    "@libsql/linux-arm64-gnu": "npm:@libsql/linux-arm64-gnu@0.5.29",
+    "@libsql/linux-x64-gnu": "npm:@libsql/linux-x64-gnu@0.5.29",
     "@tanstack/react-query": "npm:@tanstack/react-query@^5.59.0",
     "drizzle-kit": "npm:drizzle-kit@beta",
     "drizzle-orm": "npm:drizzle-orm@beta",

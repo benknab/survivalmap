@@ -8,6 +8,7 @@ ENV DENO_DIR=/deno-dir
 
 FROM base AS deps
 COPY deno.json deno.lock ./
+RUN deno install --frozen
 COPY drizzle.config.ts vite.config.ts ./
 COPY src ./src
 RUN deno cache --frozen src/main.ts src/client.ts vite.config.ts drizzle.config.ts
