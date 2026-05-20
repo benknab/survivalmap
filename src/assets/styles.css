@@ -580,14 +580,103 @@ button:hover,
   font-size: 0.72rem;
 }
 
+.point-form-tabs,
 .point-coordinate-grid,
 .point-form-actions {
   display: grid;
   gap: 6px;
 }
 
+.point-form-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.point-form-tab {
+  min-height: 28px;
+  border-color: rgba(125, 89, 50, 0.24);
+  color: var(--ink);
+  background: rgba(255, 252, 244, 0.5);
+  font-size: 0.62rem;
+}
+
+.point-form-tab:hover {
+  background: var(--wash);
+}
+
+.point-form-tab.active {
+  border-color: var(--ink);
+  color: var(--paper);
+  background: var(--ink);
+}
+
 .point-coordinate-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.point-typeahead-field {
+  display: grid;
+  gap: 5px;
+}
+
+.point-typeahead {
+  position: relative;
+}
+
+.point-typeahead-list {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  display: grid;
+  max-height: 178px;
+  overflow: auto;
+  padding: 3px;
+  border: 1px solid rgba(125, 89, 50, 0.24);
+  border-radius: 2px;
+  background: rgba(255, 252, 244, 0.98);
+  box-shadow: 0 10px 22px rgba(47, 40, 31, 0.14);
+}
+
+.point-typeahead-option {
+  display: grid;
+  width: 100%;
+  min-height: 0;
+  gap: 1px;
+  padding: 6px;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+}
+
+.point-typeahead-option:hover,
+.point-typeahead-option[aria-selected="true"] {
+  color: var(--ink);
+  background: var(--wash);
+}
+
+.point-typeahead-option span,
+.point-typeahead-empty {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.point-typeahead-empty {
+  padding: 7px;
+}
+
+.point-relative-help {
+  max-width: none;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.64rem;
+  line-height: 1.4;
+}
+
+.point-relative-help.error {
+  color: var(--error);
 }
 
 .point-form-actions {

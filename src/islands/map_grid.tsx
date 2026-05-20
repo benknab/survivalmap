@@ -47,12 +47,21 @@ type MapPoint = {
   addedByNickname: string;
 };
 
+type PointFormMode = "bearing" | "manual";
+
 type PointDraft = {
+  formMode: PointFormMode;
   name: string;
   x: string;
   y: string;
   z: string;
+  relativePointId: number | null;
+  relativePointQuery: string;
+  relativeBearing: string;
+  relativeDistance: string;
 };
+
+type PointDraftTextField = Exclude<keyof PointDraft, "formMode" | "relativePointId">;
 
 type PointInput = {
   name: string;
@@ -82,10 +91,17 @@ type DragState = {
   y: number;
 };
 
+type RelativePointResult = {
+  point: MapPoint | null;
+  coordinate: Coordinate | null;
+  error: string | null;
+};
+
 const cellMeters = 100;
 const baseCellPixels = 48;
 const minZoom = 0.32;
 const maxZoom = 2.8;
+const noSavedPointMessage = "Save a point before using bearing input.";
 
 // TanStack ships React typings; Fresh runs it through Preact compat at runtime.
 const PreactQueryClientProvider = QueryClientProvider as unknown as FunctionComponent<{
@@ -119,6 +135,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
   const [pointDraft, setPointDraft] = useState<PointDraft | null>(null);
   const [pointError, setPointError] = useState<string | null>(null);
   const [pendingPointIds, setPendingPointIds] = useState<number[]>([]);
+  const [isRelativePointListOpen, setIsRelativePointListOpen] = useState(false);
   const pointsQuery = useQuery({
     queryKey: pointsQueryKey,
     queryFn: ({ signal }) => fetchPoints(mapId, signal),
@@ -131,6 +148,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
         savedPoint,
       ]);
       setPointDraft(null);
+      setIsRelativePointListOpen(false);
     },
     onError: (error) => {
       setPointError(getErrorMessage(error, "Could not save point."));
@@ -181,6 +199,16 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
   const points = pointsQuery.data ?? [];
   const activePoints = points.filter((point) => !point.deletedAt);
   const deletedPoints = points.filter((point) => point.deletedAt);
+  const relativePointResult = pointDraft?.formMode === "bearing"
+    ? getRelativePointResult(pointDraft, activePoints)
+    : null;
+  const relativePointMessage = pointDraft && relativePointResult
+    ? getRelativePointMessage(pointDraft, relativePointResult, pointsQuery.isPending)
+    : null;
+  const relativePointMessageIsError = Boolean(relativePointResult?.error && !pointsQuery.isPending);
+  const relativePointOptions = pointDraft?.formMode === "bearing"
+    ? getPointTypeaheadOptions(pointDraft, activePoints)
+    : [];
   const visiblePointError = pointError ??
     (pointsQuery.error ? getErrorMessage(pointsQuery.error, "Could not load points.") : null);
   const canvasStyle = [
@@ -267,19 +295,61 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     const targetCoordinate = cursorPosition?.coordinate ??
       screenToWorld(size.width / 2, size.height / 2, view, size);
     setPointDraft({
+      formMode: "bearing",
       name: "",
       x: formatCoordinateInput(targetCoordinate.x),
       y: formatCoordinateInput(targetCoordinate.y),
       z: "0",
+      relativePointId: null,
+      relativePointQuery: "",
+      relativeBearing: "",
+      relativeDistance: "",
     });
+    setIsRelativePointListOpen(false);
     setPointError(null);
   }
 
-  function updatePointDraft(field: keyof PointDraft, value: string) {
-    setPointDraft((currentDraft) => currentDraft ? { ...currentDraft, [field]: value } : null);
+  function updatePointDraft(field: PointDraftTextField, value: string) {
+    setPointDraft((currentDraft) => {
+      if (!currentDraft) {
+        return null;
+      }
+
+      return {
+        ...currentDraft,
+        [field]: value,
+        relativePointId: field === "relativePointQuery" ? null : currentDraft.relativePointId,
+      };
+    });
   }
 
-  function handlePointSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>) {
+  function switchPointFormMode(formMode: PointFormMode) {
+    setPointDraft((currentDraft) => currentDraft ? { ...currentDraft, formMode } : null);
+    setIsRelativePointListOpen(false);
+    setPointError(null);
+  }
+
+  function selectRelativePoint(point: MapPoint) {
+    setPointDraft((currentDraft) => {
+      if (!currentDraft) {
+        return null;
+      }
+
+      return {
+        ...currentDraft,
+        relativePointId: point.id,
+        relativePointQuery: getPointOptionValue(point),
+      };
+    });
+    setIsRelativePointListOpen(false);
+  }
+
+  function cancelPointDraft() {
+    setPointDraft(null);
+    setIsRelativePointListOpen(false);
+  }
+
+  function handleManualPointSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!pointDraft || createPointMutation.isPending) {
@@ -298,6 +368,36 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
       !Number.isFinite(nextPoint.z)
     ) {
       setPointError("Enter a point name and numeric X, Y, and Z coordinates.");
+      return;
+    }
+
+    setPointError(null);
+    createPointMutation.mutate(nextPoint);
+  }
+
+  function handleBearingPointSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!pointDraft || createPointMutation.isPending) {
+      return;
+    }
+
+    const relativeResult = getRelativePointResult(pointDraft, activePoints);
+
+    if (!relativeResult.coordinate) {
+      setPointError(relativeResult.error ?? "Enter a saved point, bearing, and distance.");
+      return;
+    }
+
+    const nextPoint = {
+      name: pointDraft.name.trim(),
+      x: relativeResult.coordinate.x,
+      y: relativeResult.coordinate.y,
+      z: Number(pointDraft.z),
+    };
+
+    if (!nextPoint.name || !Number.isFinite(nextPoint.z)) {
+      setPointError("Enter a point name and numeric Z coordinate.");
       return;
     }
 
@@ -406,68 +506,229 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
 
         {pointDraft
           ? (
-            <form className="point-form" onSubmit={handlePointSubmit}>
-              <label>
-                Name
-                <input
-                  name="name"
-                  maxLength={80}
-                  required
-                  autoFocus
-                  placeholder="Cabin cache"
-                  value={pointDraft.name}
-                  onInput={(event) => updatePointDraft("name", event.currentTarget.value)}
-                />
-              </label>
-              <div className="point-coordinate-grid">
-                <label>
-                  X
-                  <input
-                    name="x"
-                    type="number"
-                    step="any"
-                    required
-                    value={pointDraft.x}
-                    onInput={(event) => updatePointDraft("x", event.currentTarget.value)}
-                  />
-                </label>
-                <label>
-                  Y
-                  <input
-                    name="y"
-                    type="number"
-                    step="any"
-                    required
-                    value={pointDraft.y}
-                    onInput={(event) => updatePointDraft("y", event.currentTarget.value)}
-                  />
-                </label>
-                <label>
-                  Z
-                  <input
-                    name="z"
-                    type="number"
-                    step="any"
-                    required
-                    value={pointDraft.z}
-                    onInput={(event) => updatePointDraft("z", event.currentTarget.value)}
-                  />
-                </label>
-              </div>
-              <div className="point-form-actions">
-                <button type="submit" disabled={createPointMutation.isPending}>
-                  {createPointMutation.isPending ? "Saving..." : "Save point"}
+            <>
+              <div className="point-form-tabs" role="tablist" aria-label="Point input method">
+                <button
+                  type="button"
+                  role="tab"
+                  className={`point-form-tab${pointDraft.formMode === "bearing" ? " active" : ""}`}
+                  aria-selected={pointDraft.formMode === "bearing"}
+                  onClick={() => switchPointFormMode("bearing")}
+                >
+                  Bearing
                 </button>
                 <button
                   type="button"
-                  className="secondary-button"
-                  disabled={createPointMutation.isPending}
-                  onClick={() => setPointDraft(null)}
+                  role="tab"
+                  className={`point-form-tab${pointDraft.formMode === "manual" ? " active" : ""}`}
+                  aria-selected={pointDraft.formMode === "manual"}
+                  onClick={() => switchPointFormMode("manual")}
                 >
-                  Cancel
+                  Manual
                 </button>
               </div>
-            </form>
+
+              {pointDraft.formMode === "bearing"
+                ? (
+                  <form className="point-form" onSubmit={handleBearingPointSubmit}>
+                    <p className="point-relative-help">
+                      Stand at the new point, look at a saved point, then enter that compass bearing
+                      and estimated distance.
+                    </p>
+                    <label>
+                      Name
+                      <input
+                        name="name"
+                        maxLength={80}
+                        required
+                        autoFocus
+                        placeholder="Cabin cache"
+                        value={pointDraft.name}
+                        onInput={(event) => updatePointDraft("name", event.currentTarget.value)}
+                      />
+                    </label>
+                    <div className="point-typeahead-field">
+                      <label htmlFor="relative-point-query">Looking at saved point</label>
+                      <div className="point-typeahead">
+                        <input
+                          id="relative-point-query"
+                          name="relativePointQuery"
+                          role="combobox"
+                          aria-autocomplete="list"
+                          aria-controls="relative-point-options"
+                          aria-expanded={isRelativePointListOpen}
+                          autoComplete="off"
+                          placeholder="Search saved points"
+                          value={pointDraft.relativePointQuery}
+                          onFocus={() => setIsRelativePointListOpen(true)}
+                          onClick={() => setIsRelativePointListOpen(true)}
+                          onBlur={() => setIsRelativePointListOpen(false)}
+                          onInput={(event) => {
+                            updatePointDraft("relativePointQuery", event.currentTarget.value);
+                            setIsRelativePointListOpen(true);
+                          }}
+                        />
+                        {isRelativePointListOpen
+                          ? (
+                            <div
+                              id="relative-point-options"
+                              className="point-typeahead-list"
+                              role="listbox"
+                            >
+                              {pointsQuery.isPending
+                                ? <div className="point-typeahead-empty">Loading points...</div>
+                                : relativePointOptions.length > 0
+                                ? relativePointOptions.map((point) => (
+                                  <button
+                                    key={point.id}
+                                    type="button"
+                                    className="point-typeahead-option"
+                                    role="option"
+                                    aria-selected={pointDraft.relativePointId === point.id}
+                                    onPointerDown={(event) => {
+                                      event.preventDefault();
+                                      selectRelativePoint(point);
+                                    }}
+                                  >
+                                    <strong>{point.name}</strong>
+                                    <span>{formatCoordinateTuple(point, point.z)}</span>
+                                  </button>
+                                ))
+                                : <div className="point-typeahead-empty">No matching points.</div>}
+                            </div>
+                          )
+                          : null}
+                      </div>
+                    </div>
+                    <div className="point-coordinate-grid">
+                      <label>
+                        Bearing deg
+                        <input
+                          name="relativeBearing"
+                          type="number"
+                          step="any"
+                          placeholder="0-360"
+                          value={pointDraft.relativeBearing}
+                          onInput={(event) =>
+                            updatePointDraft("relativeBearing", event.currentTarget.value)}
+                        />
+                      </label>
+                      <label>
+                        Distance m
+                        <input
+                          name="relativeDistance"
+                          type="number"
+                          step="any"
+                          min="0"
+                          placeholder="Meters"
+                          value={pointDraft.relativeDistance}
+                          onInput={(event) =>
+                            updatePointDraft("relativeDistance", event.currentTarget.value)}
+                        />
+                      </label>
+                      <label>
+                        Z
+                        <input
+                          name="z"
+                          type="number"
+                          step="any"
+                          required
+                          value={pointDraft.z}
+                          onInput={(event) => updatePointDraft("z", event.currentTarget.value)}
+                        />
+                      </label>
+                    </div>
+                    {relativePointMessage
+                      ? (
+                        <p
+                          className={`point-relative-help${
+                            relativePointMessageIsError ? " error" : ""
+                          }`}
+                        >
+                          {relativePointMessage}
+                        </p>
+                      )
+                      : null}
+                    <div className="point-form-actions">
+                      <button type="submit" disabled={createPointMutation.isPending}>
+                        {createPointMutation.isPending ? "Saving..." : "Save point"}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={createPointMutation.isPending}
+                        onClick={cancelPointDraft}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )
+                : (
+                  <form className="point-form" onSubmit={handleManualPointSubmit}>
+                    <label>
+                      Name
+                      <input
+                        name="name"
+                        maxLength={80}
+                        required
+                        autoFocus
+                        placeholder="Cabin cache"
+                        value={pointDraft.name}
+                        onInput={(event) => updatePointDraft("name", event.currentTarget.value)}
+                      />
+                    </label>
+                    <div className="point-coordinate-grid">
+                      <label>
+                        X
+                        <input
+                          name="x"
+                          type="number"
+                          step="any"
+                          required
+                          value={pointDraft.x}
+                          onInput={(event) => updatePointDraft("x", event.currentTarget.value)}
+                        />
+                      </label>
+                      <label>
+                        Y
+                        <input
+                          name="y"
+                          type="number"
+                          step="any"
+                          required
+                          value={pointDraft.y}
+                          onInput={(event) => updatePointDraft("y", event.currentTarget.value)}
+                        />
+                      </label>
+                      <label>
+                        Z
+                        <input
+                          name="z"
+                          type="number"
+                          step="any"
+                          required
+                          value={pointDraft.z}
+                          onInput={(event) => updatePointDraft("z", event.currentTarget.value)}
+                        />
+                      </label>
+                    </div>
+                    <div className="point-form-actions">
+                      <button type="submit" disabled={createPointMutation.isPending}>
+                        {createPointMutation.isPending ? "Saving..." : "Save point"}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={createPointMutation.isPending}
+                        onClick={cancelPointDraft}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
+            </>
           )
           : null}
 
@@ -663,6 +924,151 @@ function formatCoordinate(value: number): string {
 
 function formatCoordinateInput(value: number): string {
   return String(Math.round(value));
+}
+
+function hasRelativePointInput(draft: PointDraft): boolean {
+  return Boolean(
+    draft.relativePointQuery.trim() || draft.relativeBearing.trim() ||
+      draft.relativeDistance.trim(),
+  );
+}
+
+function getRelativePointResult(draft: PointDraft, points: MapPoint[]): RelativePointResult {
+  if (points.length === 0) {
+    return { point: null, coordinate: null, error: noSavedPointMessage };
+  }
+
+  const point = getPointFromTypeahead(draft, points);
+
+  if (!point) {
+    return { point: null, coordinate: null, error: "Choose a saved point from the suggestions." };
+  }
+
+  const bearing = parseDraftNumber(draft.relativeBearing);
+
+  if (bearing === null) {
+    return { point, coordinate: null, error: "Enter a numeric compass bearing." };
+  }
+
+  const distance = parseDraftNumber(draft.relativeDistance);
+
+  if (distance === null || distance < 0) {
+    return { point, coordinate: null, error: "Enter a distance of 0 meters or more." };
+  }
+
+  const bearingRadians = degreesToRadians(normalizeBearing(bearing));
+
+  return {
+    point,
+    coordinate: {
+      x: point.x - Math.sin(bearingRadians) * distance,
+      y: point.y - Math.cos(bearingRadians) * distance,
+    },
+    error: null,
+  };
+}
+
+function getRelativePointMessage(
+  draft: PointDraft,
+  result: RelativePointResult,
+  isLoading: boolean,
+): string | null {
+  if (isLoading) {
+    return "Loading saved points...";
+  }
+
+  if (!hasRelativePointInput(draft) && result.error !== noSavedPointMessage) {
+    return null;
+  }
+
+  if (result.error) {
+    return result.error;
+  }
+
+  if (!result.coordinate) {
+    return null;
+  }
+
+  const z = Number(draft.z);
+  return `Calculated position: ${
+    formatCoordinateTuple(result.coordinate, Number.isFinite(z) ? z : 0)
+  }.`;
+}
+
+function getPointTypeaheadOptions(draft: PointDraft, points: MapPoint[]): MapPoint[] {
+  const selectedPoint = draft.relativePointId === null
+    ? null
+    : points.find((point) => point.id === draft.relativePointId) ?? null;
+  const normalizedQuery = normalizeTypeaheadValue(draft.relativePointQuery);
+
+  if (
+    !normalizedQuery ||
+    (selectedPoint &&
+      normalizeTypeaheadValue(getPointOptionValue(selectedPoint)) === normalizedQuery)
+  ) {
+    return points;
+  }
+
+  return points.filter((point) => {
+    const normalizedName = normalizeTypeaheadValue(point.name);
+    const normalizedOption = normalizeTypeaheadValue(getPointOptionValue(point));
+    return normalizedName.includes(normalizedQuery) || normalizedOption.includes(normalizedQuery);
+  });
+}
+
+function getPointFromTypeahead(draft: PointDraft, points: MapPoint[]): MapPoint | null {
+  if (draft.relativePointId !== null) {
+    const point = points.find((point) => point.id === draft.relativePointId);
+
+    if (point) {
+      return point;
+    }
+  }
+
+  const normalizedQuery = normalizeTypeaheadValue(draft.relativePointQuery);
+
+  if (!normalizedQuery) {
+    return null;
+  }
+
+  const optionMatch = points.find((point) =>
+    normalizeTypeaheadValue(getPointOptionValue(point)) === normalizedQuery
+  );
+
+  if (optionMatch) {
+    return optionMatch;
+  }
+
+  const nameMatches = points.filter((point) =>
+    normalizeTypeaheadValue(point.name) === normalizedQuery
+  );
+
+  return nameMatches.length === 1 ? nameMatches[0] : null;
+}
+
+function getPointOptionValue(point: MapPoint): string {
+  return `${point.name} ${formatCoordinateTuple(point, point.z)}`;
+}
+
+function normalizeTypeaheadValue(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function parseDraftNumber(value: string): number | null {
+  if (!value.trim()) {
+    return null;
+  }
+
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function normalizeBearing(value: number): number {
+  return ((value % 360) + 360) % 360;
+}
+
+function degreesToRadians(value: number): number {
+  return value * (Math.PI / 180);
 }
 
 function getPointsPath(mapId: string): string {
