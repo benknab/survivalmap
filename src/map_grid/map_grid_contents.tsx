@@ -15,7 +15,10 @@ import { useMapPoints } from "./use_map_points.ts";
 import { useMapView } from "./use_map_view.ts";
 import { usePointEditor } from "./use_point_editor.ts";
 
-export function MapGridContents({ mapId, mapName }: MapGridProps): JSX.Element {
+export function MapGridContents(
+  { mapId, mapName, currentUserId, currentUserNickname, members, addUserError, addUserFieldErrors }:
+    MapGridProps,
+): JSX.Element {
   const mapView = useMapView();
   const mapPoints = useMapPoints(mapId);
   const editor = usePointEditor();
@@ -107,7 +110,13 @@ export function MapGridContents({ mapId, mapName }: MapGridProps): JSX.Element {
         onPointHoverEnd={editor.endPointHover}
       />
       <PointPanel
+        mapId={mapId}
         isOpen={editor.isDrawerOpen}
+        currentUserId={currentUserId}
+        currentUserNickname={currentUserNickname}
+        members={members}
+        addUserError={addUserError}
+        addUserFieldErrors={addUserFieldErrors}
         points={mapPoints.points}
         activePoints={activePoints}
         deletedPoints={deletedPoints}

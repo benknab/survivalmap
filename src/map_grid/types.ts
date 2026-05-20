@@ -3,8 +3,19 @@ import type { JSX } from "preact";
 export type MapGridProps = {
   mapId: string;
   mapName: string;
+  currentUserId: number;
   currentUserNickname: string;
+  members: MapMember[];
+  addUserError?: string;
+  addUserFieldErrors?: AddUserFieldErrors;
 };
+
+export type MapMember = {
+  id: number;
+  nickname: string;
+};
+
+export type AddUserFieldErrors = Partial<Record<"nickname", string>>;
 
 export type ViewState = {
   panX: number;

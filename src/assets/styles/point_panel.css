@@ -55,6 +55,52 @@
   font-size: 0.82rem;
 }
 
+.map-member-section {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid rgba(125, 89, 50, 0.24);
+  border-radius: 6px;
+  background: rgba(255, 252, 244, 0.54);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+}
+
+.map-member-header,
+.map-member-list li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.map-member-header small,
+.map-member-list small {
+  color: var(--accent);
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.map-member-list {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.map-member-list li {
+  min-width: 0;
+  padding: 5px 0;
+  border-top: 1px solid rgba(125, 89, 50, 0.18);
+}
+
+.map-member-list span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .point-panel label {
   gap: 5px;
   font-size: 0.64rem;
@@ -74,6 +120,31 @@
 .point-form {
   gap: 8px;
   margin-top: 0;
+}
+
+.point-panel .compact-form {
+  max-width: none;
+  gap: 7px;
+  margin-top: 2px;
+}
+
+.point-panel .compact-form input {
+  height: 30px;
+  padding: 0 8px;
+  font-size: 0.72rem;
+}
+
+.point-panel .compact-form button {
+  min-height: 30px;
+  font-size: 0.68rem;
+}
+
+.point-panel .form-error,
+.point-panel .field-error {
+  max-width: none;
+  margin: 0;
+  font-size: 0.66rem;
+  line-height: 1.4;
 }
 
 .point-form input {

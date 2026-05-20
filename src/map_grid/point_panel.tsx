@@ -1,10 +1,13 @@
 import type { JSX } from "preact";
+import { AddUserForm } from "../components/forms/user_forms.tsx";
 import { PlusIcon } from "./icons.tsx";
 import { PointDraftEditor } from "./point_draft_editor.tsx";
 import { PointLists } from "./point_lists.tsx";
 import { SelectedPointCard } from "./selected_point_card.tsx";
 import type {
+  AddUserFieldErrors,
   FormSubmitHandler,
+  MapMember,
   MapPoint,
   PointDraft,
   PointDraftTextField,
@@ -14,7 +17,13 @@ import type {
 } from "./types.ts";
 
 type PointPanelProps = {
+  mapId: string;
   isOpen: boolean;
+  currentUserId: number;
+  currentUserNickname: string;
+  members: MapMember[];
+  addUserError?: string;
+  addUserFieldErrors?: AddUserFieldErrors;
   points: MapPoint[];
   activePoints: MapPoint[];
   deletedPoints: MapPoint[];
@@ -49,7 +58,11 @@ type PointPanelProps = {
 
 export function PointPanel(props: PointPanelProps): JSX.Element {
   return (
-    <div className="point-panel" aria-label="Points of interest" hidden={!props.isOpen}>
+    <div
+      className="point-panel"
+      aria-label="Map members and points of interest"
+      hidden={!props.isOpen}
+    >
       <div className="point-panel-header">
         <strong>
           {props.activePoints.length === 1 ? "1 point" : `${props.activePoints.length} points`}
@@ -64,6 +77,14 @@ export function PointPanel(props: PointPanelProps): JSX.Element {
           <PlusIcon />
         </button>
       </div>
+      <MapMembersPanel
+        mapId={props.mapId}
+        currentUserId={props.currentUserId}
+        currentUserNickname={props.currentUserNickname}
+        members={props.members}
+        addUserError={props.addUserError}
+        addUserFieldErrors={props.addUserFieldErrors}
+      />
       {props.selectedPoint && props.pointEditDraft
         ? (
           <SelectedPointCard
@@ -92,6 +113,42 @@ export function PointPanel(props: PointPanelProps): JSX.Element {
         onUpdatePointDeletedState={props.onUpdatePointDeletedState}
       />
     </div>
+  );
+}
+
+function MapMembersPanel(
+  { mapId, currentUserId, currentUserNickname, members, addUserError, addUserFieldErrors }: {
+    mapId: string;
+    currentUserId: number;
+    currentUserNickname: string;
+    members: MapMember[];
+    addUserError?: string;
+    addUserFieldErrors?: AddUserFieldErrors;
+  },
+): JSX.Element {
+  const memberCount = members.length === 1 ? "1 member" : `${members.length} members`;
+
+  return (
+    <section className="map-member-section" aria-labelledby="map-members-title">
+      <div className="map-member-header">
+        <span id="map-members-title" className="point-section-title">Members</span>
+        <small>{memberCount}</small>
+      </div>
+      <p className="point-message">You are mapping as {currentUserNickname}.</p>
+      <ul className="map-member-list">
+        {members.map((member) => (
+          <li key={member.id}>
+            <span>{member.nickname}</span>
+            {member.id === currentUserId ? <small>You</small> : null}
+          </li>
+        ))}
+      </ul>
+      <AddUserForm
+        action={`/map/${mapId}/users`}
+        error={addUserError}
+        fieldErrors={addUserFieldErrors}
+      />
+    </section>
   );
 }
 

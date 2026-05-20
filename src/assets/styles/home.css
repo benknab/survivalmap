@@ -85,6 +85,16 @@
   margin: 24px 0;
 }
 
+.join-member-panel {
+  padding-top: 26px;
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.join-member-panel p {
+  margin: 10px 0 0;
+}
+
 .person-button {
   display: flex;
   align-items: center;

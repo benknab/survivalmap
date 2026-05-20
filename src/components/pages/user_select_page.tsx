@@ -1,6 +1,7 @@
 import { Head } from "fresh/runtime";
 import type { JSX } from "preact";
 import type { MapRecord, UserRecord } from "../../schema.ts";
+import { type AddUserFieldErrors, AddUserForm } from "../forms/user_forms.tsx";
 import { Eyebrow } from "../ui/eyebrow.tsx";
 import { LinkButton } from "../ui/link_button.tsx";
 import { Panel } from "../ui/panel.tsx";
@@ -9,9 +10,13 @@ export type UserSelectPageProps = {
   map: MapRecord;
   users: UserRecord[];
   error?: string;
+  addUserError?: string;
+  addUserFieldErrors?: AddUserFieldErrors;
 };
 
-export function UserSelectPage({ map, users, error }: UserSelectPageProps): JSX.Element {
+export function UserSelectPage(
+  { map, users, error, addUserError, addUserFieldErrors }: UserSelectPageProps,
+): JSX.Element {
   return (
     <>
       <Head>
@@ -28,6 +33,15 @@ export function UserSelectPage({ map, users, error }: UserSelectPageProps): JSX.
         {users.length > 0
           ? <UserPicker mapId={map.id} users={users} />
           : <p>No people have been added to this map yet.</p>}
+        <div className="join-member-panel">
+          <h2>New nickname</h2>
+          <p>Add yourself if your nickname is not listed.</p>
+          <AddUserForm
+            action={`/map/${map.id}/users`}
+            error={addUserError}
+            fieldErrors={addUserFieldErrors}
+          />
+        </div>
         <LinkButton href="/">Return home</LinkButton>
       </Panel>
     </>

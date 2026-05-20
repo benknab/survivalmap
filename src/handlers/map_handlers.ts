@@ -13,6 +13,7 @@ import { type FieldIssueError, getFieldIssue } from "../http/field_errors.ts";
 import { getFormString } from "../http/forms.ts";
 import { logInfo } from "../http/logging.ts";
 import { setCurrentUserCookie } from "../http/session_cookie.ts";
+import type { MapRecord, UserRecord } from "../schema.ts";
 import { getMap } from "../services/map_service.ts";
 import { addUser, getCurrentUser, getUsersForMap } from "../services/user_service.ts";
 
@@ -86,50 +87,74 @@ export async function postMapUser(ctx: Context<unknown>): Promise<Response> {
   const possibleUsers = await getUsersForMap(map.id);
   const currentUser = await getCurrentUser(ctx.req.headers, map.id);
 
-  if (!currentUser) {
-    return ctx.render(
-      h<UserSelectPageProps>(UserSelectPage, {
-        map,
-        users: possibleUsers,
-        error: "Choose who you are before adding people.",
-      }),
-      { status: 401 },
-    );
-  }
-
   const form = await ctx.req.formData();
   const result = addUserSchema.safeParse({ nickname: getFormString(form.get("nickname")) });
 
   if (!result.success) {
-    return ctx.render(
-      h<MapPageProps>(MapPage, {
-        map,
-        currentUser,
-        users: possibleUsers,
-        addUserError: "Person input is invalid.",
-        addUserFieldErrors: getAddUserFieldErrors(result.error),
-      }),
-      { status: 400 },
+    return renderAddUserError(
+      ctx,
+      map,
+      currentUser,
+      possibleUsers,
+      "Member input is invalid.",
+      getAddUserFieldErrors(result.error),
+      400,
     );
   }
 
   if (possibleUsers.some((user) => user.nickname === result.data.nickname)) {
-    return ctx.render(
-      h<MapPageProps>(MapPage, {
-        map,
-        currentUser,
-        users: possibleUsers,
-        addUserError: "That nickname is already on this map.",
-        addUserFieldErrors: { nickname: "Choose a different nickname." },
-      }),
-      { status: 409 },
+    return renderAddUserError(
+      ctx,
+      map,
+      currentUser,
+      possibleUsers,
+      "That nickname is already on this map.",
+      { nickname: "Choose a different nickname." },
+      409,
     );
   }
 
   const user = await addUser(map.id, result.data);
-  logInfo("user_added", { mapId: map.id, userId: user.id, addedByUserId: currentUser.id });
+  logInfo("user_added", { mapId: map.id, userId: user.id, addedByUserId: currentUser?.id });
 
-  return ctx.redirect(`/map/${map.id}`, 303);
+  const response = ctx.redirect(`/map/${map.id}`, 303);
+  if (!currentUser) {
+    setCurrentUserCookie(response.headers, ctx.req.headers, map.id, user.id);
+  }
+  return response;
+}
+
+function renderAddUserError(
+  ctx: Context<unknown>,
+  map: MapRecord,
+  currentUser: UserRecord | undefined,
+  users: UserRecord[],
+  addUserError: string,
+  addUserFieldErrors: AddUserFieldErrors,
+  status: number,
+): Promise<Response> {
+  if (!currentUser) {
+    return ctx.render(
+      h<UserSelectPageProps>(UserSelectPage, {
+        map,
+        users,
+        addUserError,
+        addUserFieldErrors,
+      }),
+      { status },
+    );
+  }
+
+  return ctx.render(
+    h<MapPageProps>(MapPage, {
+      map,
+      currentUser,
+      users,
+      addUserError,
+      addUserFieldErrors,
+    }),
+    { status },
+  );
 }
 
 function getAddUserFieldErrors(error: FieldIssueError): AddUserFieldErrors {

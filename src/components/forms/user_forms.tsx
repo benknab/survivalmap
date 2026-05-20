@@ -18,7 +18,7 @@ export function AddUserForm(
           <input name="nickname" maxLength={60} required placeholder="Medic" />
         </label>
         {fieldErrors.nickname ? <p className="field-error">{fieldErrors.nickname}</p> : null}
-        <button type="submit">Add person</button>
+        <button type="submit">Add member</button>
       </form>
     </>
   );

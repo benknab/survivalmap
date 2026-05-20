@@ -12,14 +12,24 @@ export type MapPageProps = {
   addUserFieldErrors?: AddUserFieldErrors;
 };
 
-export function MapPage({ map, currentUser }: MapPageProps): JSX.Element {
+export function MapPage(
+  { map, currentUser, users, addUserError, addUserFieldErrors }: MapPageProps,
+): JSX.Element {
   return (
     <>
       <Head>
         <title>{map.name} | Survival Map</title>
       </Head>
       <div className="map-page">
-        <MapGrid mapId={map.id} mapName={map.name} currentUserNickname={currentUser.nickname} />
+        <MapGrid
+          mapId={map.id}
+          mapName={map.name}
+          currentUserId={currentUser.id}
+          currentUserNickname={currentUser.nickname}
+          members={users.map((user) => ({ id: user.id, nickname: user.nickname }))}
+          addUserError={addUserError}
+          addUserFieldErrors={addUserFieldErrors}
+        />
       </div>
     </>
   );
