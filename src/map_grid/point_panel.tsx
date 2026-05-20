@@ -81,34 +81,37 @@ export function PointPanel(props: PointPanelProps): JSX.Element {
           <button
             type="button"
             className="map-icon-button point-add-button"
+            aria-controls="map-members-panel"
+            aria-expanded={isAddUserFormOpen}
+            aria-label={isAddUserFormOpen ? "Hide members" : "Show members and add member form"}
+            title={isAddUserFormOpen ? "Hide members" : "Add member"}
+            onClick={toggleAddUserForm}
+          >
+            <UserPlusIcon />
+          </button>
+          <button
+            type="button"
+            className="map-icon-button point-add-button"
             aria-label="Add point"
             title="Add point"
             onClick={props.onStartPointDraft}
           >
             <PlusIcon />
           </button>
-          <button
-            type="button"
-            className="map-icon-button point-add-button"
-            aria-controls="map-member-form"
-            aria-expanded={isAddUserFormOpen}
-            aria-label={isAddUserFormOpen ? "Hide add member form" : "Show add member form"}
-            title={isAddUserFormOpen ? "Hide add member form" : "Add member"}
-            onClick={toggleAddUserForm}
-          >
-            <UserPlusIcon />
-          </button>
         </div>
       </div>
-      <MapMembersPanel
-        mapId={props.mapId}
-        currentUserId={props.currentUserId}
-        currentUserNickname={props.currentUserNickname}
-        members={props.members}
-        addUserError={props.addUserError}
-        addUserFieldErrors={props.addUserFieldErrors}
-        isAddUserFormOpen={isAddUserFormOpen}
-      />
+      {isAddUserFormOpen
+        ? (
+          <MapMembersPanel
+            mapId={props.mapId}
+            currentUserId={props.currentUserId}
+            currentUserNickname={props.currentUserNickname}
+            members={props.members}
+            addUserError={props.addUserError}
+            addUserFieldErrors={props.addUserFieldErrors}
+          />
+        )
+        : null}
       {props.selectedPoint && props.pointEditDraft
         ? (
           <SelectedPointCard
@@ -148,7 +151,6 @@ function MapMembersPanel(
     members,
     addUserError,
     addUserFieldErrors,
-    isAddUserFormOpen,
   }: {
     mapId: string;
     currentUserId: number;
@@ -156,13 +158,16 @@ function MapMembersPanel(
     members: MapMember[];
     addUserError?: string;
     addUserFieldErrors?: AddUserFieldErrors;
-    isAddUserFormOpen: boolean;
   },
 ): JSX.Element {
   const memberCount = members.length === 1 ? "1 member" : `${members.length} members`;
 
   return (
-    <section className="map-member-section" aria-labelledby="map-members-title">
+    <section
+      id="map-members-panel"
+      className="map-member-section"
+      aria-labelledby="map-members-title"
+    >
       <div className="map-member-header">
         <span id="map-members-title" className="point-section-title">Members</span>
         <small>{memberCount}</small>
@@ -176,7 +181,7 @@ function MapMembersPanel(
           </li>
         ))}
       </ul>
-      <div id="map-member-form" className="map-member-form" hidden={!isAddUserFormOpen}>
+      <div className="map-member-form">
         <AddUserForm
           action={`/map/${mapId}/users`}
           error={addUserError}
