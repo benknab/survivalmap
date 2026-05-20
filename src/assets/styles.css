@@ -341,6 +341,7 @@ button:hover,
 
 .map-grid {
   position: relative;
+  --drawer-width: clamp(260px, 24vw, 312px);
   width: 100%;
   height: 100dvh;
   min-height: 520px;
@@ -357,10 +358,10 @@ button:hover,
   overflow: hidden;
   background-color: #f8f2e7;
   background-image:
-    linear-gradient(rgba(86, 64, 35, 0.22) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(86, 64, 35, 0.22) 1px, transparent 1px),
-    linear-gradient(rgba(86, 64, 35, 0.095) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(86, 64, 35, 0.095) 1px, transparent 1px);
+    linear-gradient(rgba(86, 64, 35, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(86, 64, 35, 0.2) 1px, transparent 1px),
+    linear-gradient(rgba(86, 64, 35, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(86, 64, 35, 0.08) 1px, transparent 1px);
   background-position:
     var(--grid-origin-x) var(--grid-origin-y),
     var(--grid-origin-x) var(--grid-origin-y),
@@ -407,72 +408,52 @@ button:hover,
 }
 
 .axis-line,
-.map-range-ring,
-.map-origin-marker,
-.point-marker,
-.tick-label {
+.point-marker {
   position: absolute;
   z-index: 1;
   pointer-events: none;
 }
 
 .axis-line {
-  background: rgba(47, 40, 31, 0.5);
+  background: rgba(47, 40, 31, 0.34);
 }
 
 .x-axis {
   right: 0;
   left: 0;
-  height: 2px;
+  height: 1px;
 }
 
 .y-axis {
   top: 0;
   bottom: 0;
-  width: 2px;
-}
-
-.map-range-ring {
-  border: 1px dashed rgba(125, 89, 50, 0.46);
-  border-radius: 9999px;
-  transform: translate(-50%, -50%);
-}
-
-.map-origin-marker {
-  display: grid;
-  width: 18px;
-  height: 18px;
-  place-items: center;
-  border: 2px solid var(--accent);
-  border-radius: 999px;
-  background: var(--paper);
-  transform: translate(-50%, -50%);
+  width: 1px;
 }
 
 .point-marker {
   z-index: 2;
   display: flex;
-  gap: 7px;
+  gap: 5px;
   align-items: center;
   color: var(--ink);
-  filter: drop-shadow(0 4px 10px rgba(47, 40, 31, 0.16));
-  transform: translate(-9px, -50%);
+  filter: drop-shadow(0 3px 8px rgba(47, 40, 31, 0.14));
+  transform: translate(-6px, -50%);
 }
 
 .point-marker-dot {
-  width: 18px;
-  height: 18px;
+  width: 12px;
+  height: 12px;
   border: 2px solid #fff9ec;
   border-radius: 999px;
   background: #9b3d2e;
-  box-shadow: 0 0 0 2px rgba(47, 40, 31, 0.72);
+  box-shadow: 0 0 0 1px rgba(47, 40, 31, 0.68);
 }
 
 .point-marker-label {
   display: grid;
-  max-width: 180px;
+  max-width: 132px;
   gap: 2px;
-  padding: 5px 7px;
+  padding: 3px 5px;
   border: 1px solid rgba(125, 89, 50, 0.18);
   border-radius: 2px;
   background: rgba(255, 252, 244, 0.82);
@@ -487,205 +468,100 @@ button:hover,
 }
 
 .point-marker-label strong {
-  font-size: 0.82rem;
+  font-size: 0.68rem;
 }
 
 .point-marker-label small {
   color: var(--muted);
-  font-size: 0.66rem;
+  font-size: 0.56rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
-.tick-label {
-  padding: 3px 6px;
-  border: 1px solid rgba(125, 89, 50, 0.14);
-  border-radius: 999px;
-  color: rgba(47, 40, 31, 0.68);
-  background: rgba(255, 252, 244, 0.66);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.x-tick {
-  top: 12px;
-  transform: translateX(-50%);
-}
-
-.y-tick {
-  left: 12px;
-  transform: translateY(-50%);
-}
-
-.compass-label {
-  position: absolute;
-  z-index: 3;
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border: 1px solid rgba(125, 89, 50, 0.2);
-  border-radius: 999px;
-  color: var(--accent);
-  background: rgba(255, 252, 244, 0.78);
-  font-size: 0.86rem;
-  font-weight: 950;
-  letter-spacing: 0.12em;
-  pointer-events: none;
-}
-
-.compass-north {
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.compass-east {
-  top: 50%;
-  right: 14px;
-  transform: translateY(-50%);
-}
-
-.compass-south {
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.compass-west {
-  top: 50%;
-  left: 14px;
-  transform: translateY(-50%);
-}
-
-.map-hud,
-.coordinate-panel,
 .point-panel,
-.map-control-panel,
-.map-scale {
+.drawer-toggle-button {
   position: absolute;
   z-index: 4;
   border: 1px solid rgba(125, 89, 50, 0.2);
   color: var(--ink);
   background: rgba(255, 252, 244, 0.8);
   backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(47, 40, 31, 0.14);
 }
 
-.map-hud {
-  top: 18px;
-  left: 18px;
-  display: grid;
-  max-width: min(360px, calc(100vw - 124px));
-  padding: 10px 13px;
-  border-radius: 2px;
-}
-
-.map-hud h1,
-.map-hud p {
-  max-width: none;
-  margin: 0;
-  color: inherit;
-  font-family: inherit;
-}
-
-.map-hud h1 {
-  overflow: hidden;
+.cursor-coordinate {
+  position: absolute;
+  z-index: 5;
+  padding: 3px 6px;
+  border: 1px solid rgba(125, 89, 50, 0.18);
+  border-radius: 999px;
   color: var(--ink);
-  font-size: clamp(1.05rem, 2vw, 1.45rem);
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
-  text-overflow: ellipsis;
+  background: rgba(255, 252, 244, 0.84);
+  box-shadow: 0 5px 14px rgba(47, 40, 31, 0.12);
+  transform: translate(12px, 10px);
+  pointer-events: none;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.58rem;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.coordinate-panel {
-  bottom: 18px;
-  left: 18px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  padding: 10px 12px;
-  border-radius: 2px;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 0.86rem;
-}
-
-.coordinate-panel span {
-  color: var(--muted);
-  font-weight: 850;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.coordinate-panel strong {
-  font-variant-numeric: tabular-nums;
-}
-
 .point-panel {
-  top: 76px;
-  left: 18px;
+  top: 0;
+  bottom: 0;
+  left: 0;
   display: grid;
-  width: min(340px, calc(100vw - 36px));
-  max-height: calc(100dvh - 176px);
-  gap: 8px;
+  align-content: start;
+  width: var(--drawer-width);
+  gap: 7px;
   overflow: auto;
   padding: 10px;
-  border-radius: 2px;
+  border-width: 0 1px 0 0;
+  border-radius: 0;
+  box-shadow: 8px 0 24px rgba(47, 40, 31, 0.12);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
+}
+
+.point-panel[hidden] {
+  display: none;
 }
 
 .point-panel-header {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
 }
 
-.point-panel-header div {
-  display: grid;
-  gap: 2px;
-}
-
-.point-panel-header span,
 .point-section-title,
 .point-list small,
 .point-message {
   color: var(--muted);
 }
 
-.point-panel-header span {
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
 .point-section-title {
   padding-top: 4px;
-  font-size: 0.68rem;
+  font-size: 0.58rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .point-panel-header strong {
-  font-size: 1rem;
+  font-size: 0.82rem;
 }
 
-.point-add-button {
-  min-height: 36px;
-  white-space: nowrap;
+.point-panel label {
+  gap: 5px;
+  font-size: 0.64rem;
 }
 
 .point-message {
   max-width: none;
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   line-height: 1.45;
 }
 
@@ -694,19 +570,20 @@ button:hover,
 }
 
 .point-form {
-  gap: 10px;
+  gap: 8px;
   margin-top: 0;
 }
 
 .point-form input {
-  height: 38px;
-  padding: 0 10px;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 0.72rem;
 }
 
 .point-coordinate-grid,
 .point-form-actions {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .point-coordinate-grid {
@@ -718,7 +595,8 @@ button:hover,
 }
 
 .point-form-actions button {
-  min-height: 40px;
+  min-height: 30px;
+  font-size: 0.68rem;
 }
 
 .point-list {
@@ -733,7 +611,7 @@ button:hover,
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
   align-items: center;
-  padding: 6px 0;
+  padding: 5px 0;
   border-top: 1px solid rgba(125, 89, 50, 0.18);
 }
 
@@ -761,11 +639,12 @@ button:hover,
 
 .point-action-button {
   display: grid;
-  width: 28px;
-  min-height: 28px;
+  width: 24px;
+  min-height: 24px;
   place-items: center;
   padding: 0;
   border-color: rgba(125, 89, 50, 0.28);
+  border-radius: 4px;
   color: var(--ink);
   background: transparent;
 }
@@ -780,8 +659,8 @@ button:hover,
 }
 
 .point-action-icon {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -799,8 +678,32 @@ button:hover,
 
 .point-list span,
 .point-list small {
-  font-size: 0.75rem;
+  font-size: 0.66rem;
   font-variant-numeric: tabular-nums;
+}
+
+.drawer-toggle-button {
+  top: 50%;
+  left: calc(var(--drawer-width) - 1px);
+  z-index: 5;
+  display: grid;
+  width: 22px;
+  height: 52px;
+  min-width: 22px;
+  min-height: 52px;
+  place-items: center;
+  padding: 0;
+  border-radius: 0 999px 999px 0;
+  color: var(--ink);
+  transform: translateY(-50%);
+}
+
+.drawer-toggle-button:hover {
+  background: rgba(255, 252, 244, 0.92);
+}
+
+.map-grid.is-drawer-closed .drawer-toggle-button {
+  left: 0;
 }
 
 button:disabled {
@@ -808,59 +711,100 @@ button:disabled {
   opacity: 0.56;
 }
 
-.map-control-panel {
-  right: 18px;
-  bottom: 18px;
+.map-control-stack {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 4;
   display: grid;
-  grid-template-columns: repeat(2, 46px);
   gap: 8px;
-  padding: 10px;
-  border-radius: 2px;
+  justify-items: end;
 }
 
-.map-button,
-.map-link {
-  display: inline-flex;
-  min-width: 0;
-  min-height: 42px;
+.map-control-panel {
+  display: grid;
+  grid-template-columns: 30px;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(125, 89, 50, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 252, 244, 0.8);
+  box-shadow: 0 8px 24px rgba(47, 40, 31, 0.14);
+}
+
+.map-bottom-tools {
+  display: flex;
+  gap: 8px;
   align-items: center;
-  justify-content: center;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  color: var(--ink);
-  background: rgba(255, 252, 244, 0.62);
-  font-size: 0.95rem;
-  font-weight: 950;
-  text-decoration: none;
+  justify-content: flex-end;
 }
 
-.map-button:hover,
-.map-link:hover {
+.map-icon-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--ink);
+  background: rgba(255, 252, 244, 0.82);
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.map-control-panel .map-icon-button + .map-icon-button {
+  border-top: 1px solid rgba(125, 89, 50, 0.2);
+}
+
+.map-icon-button:hover {
   background: var(--wash);
 }
 
-.map-button.wide,
-.map-link {
-  grid-column: span 2;
+.point-add-button {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  border: 1px solid rgba(125, 89, 50, 0.24);
+  border-radius: 999px;
+  box-shadow: 0 2px 7px rgba(47, 40, 31, 0.1);
+}
+
+.map-button-icon {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
 }
 
 .map-scale {
-  right: 18px;
-  top: 18px;
-  display: grid;
-  gap: 5px;
-  min-width: 132px;
-  padding: 11px 12px;
-  border-radius: 2px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid rgba(125, 89, 50, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 252, 244, 0.8);
+  box-shadow: 0 8px 24px rgba(47, 40, 31, 0.14);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 0.75rem;
+  font-size: 0.62rem;
+  white-space: nowrap;
 }
 
 .map-scale span {
   display: block;
-  max-width: 100%;
-  height: 8px;
+  flex: 0 1 auto;
+  min-width: 26px;
+  max-width: 58px;
+  height: 6px;
   border-right: 2px solid var(--ink);
   border-left: 2px solid var(--ink);
   background: linear-gradient(var(--ink), var(--ink)) center / 100% 2px no-repeat;
@@ -873,6 +817,40 @@ button:disabled {
 
 .map-scale small {
   color: var(--muted);
+}
+
+.map-compass {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(125, 89, 50, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 252, 244, 0.86);
+  box-shadow: 0 8px 24px rgba(47, 40, 31, 0.14);
+}
+
+.map-compass-icon {
+  width: 27px;
+  height: 27px;
+}
+
+.map-compass-ring {
+  fill: rgba(255, 252, 244, 0.72);
+  stroke: rgba(125, 89, 50, 0.34);
+  stroke-width: 1.4;
+}
+
+.map-compass-needle-shadow {
+  fill: rgba(47, 40, 31, 0.16);
+}
+
+.map-compass-needle {
+  fill: #b23a2e;
+}
+
+.map-compass-tail {
+  fill: rgba(47, 40, 31, 0.58);
 }
 
 code,
@@ -911,76 +889,40 @@ pre {
   }
 
   .map-grid {
+    --drawer-width: min(250px, calc(100vw - 92px));
     min-height: 100dvh;
   }
 
-  .map-hud {
-    top: 12px;
-    left: 12px;
-    max-width: calc(100vw - 84px);
-    padding: 12px;
-    border-radius: 15px;
-  }
-
-  .map-hud h1 {
-    font-size: 1.32rem;
-  }
-
-  .map-hud p:last-child {
-    font-size: 0.72rem;
-  }
-
-  .map-scale {
-    top: auto;
-    right: 12px;
-    bottom: 158px;
-    min-width: 104px;
-  }
-
-  .coordinate-panel {
-    right: 12px;
-    bottom: 12px;
-    left: 12px;
-    border-radius: 16px;
+  .map-control-stack {
+    right: 10px;
+    bottom: 10px;
+    gap: 6px;
   }
 
   .point-panel {
-    top: 76px;
-    right: 12px;
-    left: 12px;
-    width: auto;
-    max-height: 36dvh;
-    border-radius: 16px;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: var(--drawer-width);
+    max-height: none;
+    padding: 9px;
+    border-radius: 0;
   }
 
   .point-marker-label {
-    max-width: 132px;
+    max-width: 112px;
   }
 
-  .map-control-panel {
-    right: 12px;
-    bottom: 66px;
+  .drawer-toggle-button {
+    left: calc(var(--drawer-width) - 1px);
   }
 
-  .compass-label {
-    width: 34px;
-    height: 34px;
-    font-size: 0.75rem;
+  .map-scale {
+    font-size: 0.58rem;
   }
 
-  .compass-north {
-    top: 12px;
-  }
-
-  .compass-east {
-    right: 12px;
-  }
-
-  .compass-south {
-    bottom: 12px;
-  }
-
-  .compass-west {
-    left: 12px;
+  .map-compass {
+    width: 32px;
+    height: 32px;
   }
 }

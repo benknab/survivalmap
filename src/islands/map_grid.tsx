@@ -30,6 +30,11 @@ type Coordinate = {
   y: number;
 };
 
+type CursorPosition = {
+  coordinate: Coordinate;
+  screen: Coordinate;
+};
+
 type MapPoint = {
   id: number;
   mapId: string;
@@ -77,16 +82,10 @@ type DragState = {
   y: number;
 };
 
-type Tick = {
-  value: number;
-  screen: number;
-};
-
 const cellMeters = 100;
-const baseCellPixels = 80;
+const baseCellPixels = 48;
 const minZoom = 0.32;
 const maxZoom = 2.8;
-const rangeRings = [500, 1000, 2000];
 
 // TanStack ships React typings; Fresh runs it through Preact compat at runtime.
 const PreactQueryClientProvider = QueryClientProvider as unknown as FunctionComponent<{
@@ -115,7 +114,8 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     height: typeof globalThis.innerHeight === "number" ? globalThis.innerHeight : 0,
   }));
   const [isDragging, setIsDragging] = useState(false);
-  const [pointerCoord, setPointerCoord] = useState<Coordinate | null>(null);
+  const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
   const [pointDraft, setPointDraft] = useState<PointDraft | null>(null);
   const [pointError, setPointError] = useState<string | null>(null);
   const [pendingPointIds, setPendingPointIds] = useState<number[]>([]);
@@ -176,12 +176,8 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     return () => observer.disconnect();
   }, []);
 
-  const pixelsPerMeter = getPixelsPerMeter(view.zoom);
   const cellSize = baseCellPixels * view.zoom;
   const origin = worldToScreen({ x: 0, y: 0 }, view, size);
-  const coordinate = pointerCoord ?? screenToWorld(size.width / 2, size.height / 2, view, size);
-  const tickStep = getTickStep(cellSize);
-  const ticks = getTicks(view, size, tickStep);
   const points = pointsQuery.data ?? [];
   const activePoints = points.filter((point) => !point.deletedAt);
   const deletedPoints = points.filter((point) => point.deletedAt);
@@ -202,11 +198,11 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
     setIsDragging(true);
-    setPointerCoord(getEventCoordinate(event, view));
+    setCursorPosition(getEventCursorPosition(event, view));
   }
 
   function handlePointerMove(event: JSX.TargetedPointerEvent<HTMLDivElement>) {
-    setPointerCoord(getEventCoordinate(event, view));
+    setCursorPosition(getEventCursorPosition(event, view));
 
     if (dragRef.current?.pointerId !== event.pointerId) {
       return;
@@ -231,7 +227,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
 
   function handlePointerLeave() {
     if (!isDragging) {
-      setPointerCoord(null);
+      setCursorPosition(null);
     }
   }
 
@@ -267,12 +263,8 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     );
   }
 
-  function resetView() {
-    setView({ panX: 0, panY: 0, zoom: 1 });
-  }
-
   function startPointDraft() {
-    const targetCoordinate = pointerCoord ??
+    const targetCoordinate = cursorPosition?.coordinate ??
       screenToWorld(size.width / 2, size.height / 2, view, size);
     setPointDraft({
       name: "",
@@ -323,19 +315,27 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     updatePointMutation.mutate({ pointId, deleted });
   }
 
-  function getEventCoordinate(
+  function getEventCursorPosition(
     event: JSX.TargetedPointerEvent<HTMLDivElement>,
     currentView: ViewState,
-  ): Coordinate {
+  ): CursorPosition {
     const rect = event.currentTarget.getBoundingClientRect();
-    return screenToWorld(event.clientX - rect.left, event.clientY - rect.top, currentView, {
-      width: rect.width,
-      height: rect.height,
-    });
+    const screen = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+
+    return {
+      coordinate: screenToWorld(screen.x, screen.y, currentView, {
+        width: rect.width,
+        height: rect.height,
+      }),
+      screen,
+    };
   }
 
   return (
-    <div className="map-grid" aria-label={`${mapName} coordinate map`}>
+    <div
+      className={`map-grid${isDrawerOpen ? "" : " is-drawer-closed"}`}
+      aria-label={`${mapName} coordinate map`}
+    >
       <div
         ref={canvasRef}
         className={`map-canvas${isDragging ? " is-dragging" : ""}`}
@@ -351,52 +351,6 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
       >
         <div className="axis-line x-axis" style={{ top: `${origin.y}px` }} aria-hidden="true" />
         <div className="axis-line y-axis" style={{ left: `${origin.x}px` }} aria-hidden="true" />
-
-        {rangeRings.map((radius) => {
-          const diameter = radius * pixelsPerMeter * 2;
-
-          return (
-            <div
-              key={radius}
-              className="map-range-ring"
-              style={{
-                left: `${origin.x}px`,
-                top: `${origin.y}px`,
-                width: `${diameter}px`,
-                height: `${diameter}px`,
-              }}
-              aria-hidden="true"
-            />
-          );
-        })}
-
-        {ticks.x.map((tick) => (
-          <span
-            key={`x-${tick.value}`}
-            className="tick-label x-tick"
-            style={{ left: `${tick.screen}px` }}
-            aria-hidden="true"
-          >
-            {formatAxisValue(tick.value, "E", "W")}
-          </span>
-        ))}
-
-        {ticks.y.map((tick) => (
-          <span
-            key={`y-${tick.value}`}
-            className="tick-label y-tick"
-            style={{ top: `${tick.screen}px` }}
-            aria-hidden="true"
-          >
-            {formatAxisValue(tick.value, "N", "S")}
-          </span>
-        ))}
-
-        <div
-          className="map-origin-marker"
-          style={{ left: `${origin.x}px`, top: `${origin.y}px` }}
-          aria-label="Origin at (0, 0, 0)"
-        />
 
         {activePoints.map((point) => {
           const screen = worldToScreen(point, view, size);
@@ -419,30 +373,34 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
         })}
       </div>
 
-      <div className="compass-label compass-north" aria-hidden="true">N</div>
-      <div className="compass-label compass-east" aria-hidden="true">E</div>
-      <div className="compass-label compass-south" aria-hidden="true">S</div>
-      <div className="compass-label compass-west" aria-hidden="true">W</div>
-
-      <div className="map-hud" aria-label="Map information">
-        <h1>{mapName}</h1>
-      </div>
-
-      <div className="coordinate-panel" aria-live="polite">
-        <span>{pointerCoord ? "Cursor" : "Center"}</span>
-        <strong>{formatCoordinateTuple(coordinate, 0)}</strong>
-      </div>
-
-      <div className="point-panel" aria-label="Points of interest">
-        <div className="point-panel-header">
-          <div>
-            <span>POI</span>
-            <strong>
-              {activePoints.length === 1 ? "1 point" : `${activePoints.length} points`}
-            </strong>
+      {cursorPosition
+        ? (
+          <div
+            className="cursor-coordinate"
+            style={{
+              left: `${cursorPosition.screen.x}px`,
+              top: `${cursorPosition.screen.y}px`,
+            }}
+            aria-hidden="true"
+          >
+            {formatCoordinateTuple(cursorPosition.coordinate, 0)}
           </div>
-          <button type="button" className="map-button point-add-button" onClick={startPointDraft}>
-            Add point
+        )
+        : null}
+
+      <div className="point-panel" aria-label="Points of interest" hidden={!isDrawerOpen}>
+        <div className="point-panel-header">
+          <strong>
+            {activePoints.length === 1 ? "1 point" : `${activePoints.length} points`}
+          </strong>
+          <button
+            type="button"
+            className="map-icon-button point-add-button"
+            aria-label="Add point"
+            title="Add point"
+            onClick={startPointDraft}
+          >
+            <PlusIcon />
           </button>
         </div>
 
@@ -593,23 +551,49 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
           : null}
       </div>
 
-      <div className="map-control-panel" aria-label="Map controls">
-        <button type="button" className="map-button" onClick={() => changeZoom(1.18)}>
-          +
-        </button>
-        <button type="button" className="map-button" onClick={() => changeZoom(1 / 1.18)}>
-          -
-        </button>
-        <button type="button" className="map-button wide" onClick={resetView}>
-          Reset
-        </button>
-        <a className="map-link" href="/">Home</a>
-      </div>
+      <button
+        type="button"
+        className="drawer-toggle-button"
+        aria-label={isDrawerOpen ? "Close points drawer" : "Open points drawer"}
+        aria-expanded={isDrawerOpen}
+        title={isDrawerOpen ? "Close points drawer" : "Open points drawer"}
+        onClick={() => setIsDrawerOpen((open) => !open)}
+      >
+        {isDrawerOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+      </button>
 
-      <div className="map-scale" aria-hidden="true">
-        <span style={{ width: `${cellSize}px` }} />
-        <strong>100m</strong>
-        <small>{Math.round(view.zoom * 100)}% zoom</small>
+      <div className="map-control-stack">
+        <div className="map-control-panel" aria-label="Map controls">
+          <button
+            type="button"
+            className="map-icon-button"
+            aria-label="Zoom in"
+            title="Zoom in"
+            onClick={() => changeZoom(1.18)}
+          >
+            <PlusIcon />
+          </button>
+          <button
+            type="button"
+            className="map-icon-button"
+            aria-label="Zoom out"
+            title="Zoom out"
+            onClick={() => changeZoom(1 / 1.18)}
+          >
+            <MinusIcon />
+          </button>
+        </div>
+
+        <div className="map-bottom-tools">
+          <div className="map-scale" aria-hidden="true">
+            <span style={{ width: `${cellSize}px` }} />
+            <strong>100m</strong>
+            <small>{Math.round(view.zoom * 100)}% zoom</small>
+          </div>
+          <div className="map-compass" aria-label="North is up" title="North is up">
+            <CompassIcon />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -664,59 +648,6 @@ function worldToScreen(
     x: size.width / 2 + view.panX + coordinate.x * pixelsPerMeter,
     y: size.height / 2 + view.panY - coordinate.y * pixelsPerMeter,
   };
-}
-
-function getTicks(view: ViewState, size: ViewportSize, step: number): { x: Tick[]; y: Tick[] } {
-  if (size.width <= 0 || size.height <= 0) {
-    return { x: [], y: [] };
-  }
-
-  const topLeft = screenToWorld(0, 0, view, size);
-  const bottomRight = screenToWorld(size.width, size.height, view, size);
-  const minX = Math.floor(Math.min(topLeft.x, bottomRight.x) / step) * step;
-  const maxX = Math.ceil(Math.max(topLeft.x, bottomRight.x) / step) * step;
-  const minY = Math.floor(Math.min(topLeft.y, bottomRight.y) / step) * step;
-  const maxY = Math.ceil(Math.max(topLeft.y, bottomRight.y) / step) * step;
-  const x: Tick[] = [];
-  const y: Tick[] = [];
-
-  for (let value = minX; value <= maxX; value += step) {
-    const screen = worldToScreen({ x: value, y: 0 }, view, size).x;
-
-    if (screen >= -80 && screen <= size.width + 80) {
-      x.push({ value, screen });
-    }
-  }
-
-  for (let value = minY; value <= maxY; value += step) {
-    const screen = worldToScreen({ x: 0, y: value }, view, size).y;
-
-    if (screen >= -80 && screen <= size.height + 80) {
-      y.push({ value, screen });
-    }
-  }
-
-  return { x, y };
-}
-
-function getTickStep(cellSize: number): number {
-  if (cellSize >= 58) {
-    return 100;
-  }
-
-  if (cellSize >= 30) {
-    return 200;
-  }
-
-  return 500;
-}
-
-function formatAxisValue(value: number, positiveLabel: string, negativeLabel: string): string {
-  if (value === 0) {
-    return "0";
-  }
-
-  return `${value > 0 ? positiveLabel : negativeLabel} ${Math.abs(value)}`;
 }
 
 function formatCoordinateTuple(coordinate: Coordinate, z: number): string {
@@ -823,6 +754,50 @@ function RestoreIcon() {
     <svg className="point-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M7 7a7 7 0 1 1-1.8 6.8" />
       <path d="M7 7H3V3" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg className="map-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+function MinusIcon() {
+  return (
+    <svg className="map-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg className="map-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M15 6l-6 6 6 6" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg className="map-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+function CompassIcon() {
+  return (
+    <svg className="map-compass-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <circle className="map-compass-ring" cx="16" cy="16" r="13" />
+      <path className="map-compass-needle-shadow" d="M16 26l-4.2-9.1L16 6l4.2 10.9L16 26z" />
+      <path className="map-compass-needle" d="M16 6l4.2 10.9L16 15.2l-4.2 1.7L16 6z" />
+      <path className="map-compass-tail" d="M16 15.2l4.2 1.7L16 26l-4.2-9.1L16 15.2z" />
     </svg>
   );
 }
