@@ -2,10 +2,11 @@
   "nodeModulesDir": "auto",
   "tasks": {
     "dev": "deno task db:migrate && vite --host 0.0.0.0",
-    "check": "deno check src/main.ts src/client.ts vite.config.ts drizzle.config.ts",
+    "check": "deno check src/main.ts src/client.ts vite.config.ts drizzle.config.ts src/dev/lint_file_names.ts",
     "db:generate": "deno run -A npm:drizzle-kit@beta generate",
     "db:migrate": "deno run -A npm:drizzle-kit@beta migrate",
-    "lint": "deno lint",
+    "lint": "deno lint && deno task lint:file-names",
+    "lint:file-names": "deno run --allow-read src/dev/lint_file_names.ts",
     "fmt": "deno fmt",
     "build": "vite build",
     "start": "deno task db:migrate && deno serve -A _fresh/server.js"
