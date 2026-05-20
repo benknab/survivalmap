@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { App, staticFiles } from "fresh";
+import { App, type Context, staticFiles } from "fresh";
 import { h } from "preact";
 import * as z from "zod";
 import { AppWrapper } from "./components/app_wrapper.tsx";
@@ -99,8 +99,11 @@ type PointResponse = PointRecord & { addedByNickname: string };
 
 export const app = new App()
   .use(staticFiles())
+  .use(logRequest)
   .appWrapper(AppWrapper)
   .onError("*", (ctx) => {
+    logError("request_error", getRequestLogContext(ctx, { error: getErrorLog(ctx.error) }));
+
     if (isPointApiRequest(ctx.req)) {
       return Response.json({ error: "Unexpected point server error." }, { status: 500 });
     }
@@ -135,6 +138,8 @@ export const app = new App()
     }
 
     const { map, user } = await createMap(result.data);
+    logInfo("map_created", { mapId: map.id, userId: user.id });
+
     const response = ctx.redirect(`/map/${map.id}`, 303);
     setCurrentUserCookie(response.headers, ctx.req.headers, map.id, user.id);
     return response;
@@ -200,6 +205,7 @@ export const app = new App()
     }
 
     const pointRow = await addPoint(map.id, currentUser.id, result.data);
+    logInfo("point_added", { mapId: map.id, pointId: pointRow.id, userId: currentUser.id });
 
     return Response.json({ point: getPointResponse(pointRow, currentUser) }, { status: 201 });
   })
@@ -238,6 +244,21 @@ export const app = new App()
     }
 
     const addedByUser = await getUserForMap(map.id, pointRow.addedByUserId);
+    if (!addedByUser) {
+      logWarn("point_user_missing", {
+        mapId: map.id,
+        pointId: pointRow.id,
+        addedByUserId: pointRow.addedByUserId,
+      });
+    }
+
+    logInfo("point_updated", {
+      mapId: map.id,
+      pointId: pointRow.id,
+      userId: currentUser.id,
+      fields: getPointUpdateFields(result.data),
+    });
+
     return Response.json({ point: getPointResponse(pointRow, addedByUser) });
   })
   .get("/map/:id", async (ctx) => {
@@ -335,10 +356,125 @@ export const app = new App()
       );
     }
 
-    await addUser(map.id, result.data);
+    const user = await addUser(map.id, result.data);
+    logInfo("user_added", { mapId: map.id, userId: user.id, addedByUserId: currentUser.id });
+
     return ctx.redirect(`/map/${map.id}`, 303);
   })
   .notFound((ctx) => ctx.render(h(MapNotFoundPage, {}), { status: 404 }));
+
+type LogValue = string | number | boolean | null | undefined | LogValue[] | {
+  [key: string]: LogValue;
+};
+type LogContext = Record<string, LogValue>;
+type LogLevel = "info" | "warn" | "error";
+
+async function logRequest(ctx: Context<unknown>): Promise<Response> {
+  const startedAt = performance.now();
+
+  try {
+    const response = await ctx.next();
+    const context = getRequestLogContext(ctx, {
+      status: response.status,
+      durationMs: getDurationMs(startedAt),
+    });
+
+    if (response.status >= 500) {
+      logError("request", context);
+    } else if (response.status >= 400) {
+      logWarn("request", context);
+    } else {
+      logInfo("request", context);
+    }
+
+    return response;
+  } catch (error) {
+    logError(
+      "request_unhandled_error",
+      getRequestLogContext(ctx, {
+        durationMs: getDurationMs(startedAt),
+        error: getErrorLog(error),
+      }),
+    );
+    throw error;
+  }
+}
+
+function getRequestLogContext(ctx: Context<unknown>, context: LogContext = {}): LogContext {
+  return {
+    method: ctx.req.method,
+    path: ctx.url.pathname,
+    route: ctx.route ?? undefined,
+    ...context,
+  };
+}
+
+function getDurationMs(startedAt: number): number {
+  return Math.round((performance.now() - startedAt) * 10) / 10;
+}
+
+function logInfo(event: string, context: LogContext = {}): void {
+  writeLog("info", event, context);
+}
+
+function logWarn(event: string, context: LogContext = {}): void {
+  writeLog("warn", event, context);
+}
+
+function logError(event: string, context: LogContext = {}): void {
+  writeLog("error", event, context);
+}
+
+function writeLog(level: LogLevel, event: string, context: LogContext): void {
+  const message = JSON.stringify({
+    time: new Date().toISOString(),
+    level,
+    event,
+    ...context,
+  });
+
+  if (level === "error") {
+    console.error(message);
+  } else if (level === "warn") {
+    console.warn(message);
+  } else {
+    console.info(message);
+  }
+}
+
+function getErrorLog(error: unknown): LogContext {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+  }
+
+  return { message: String(error) };
+}
+
+function getPointUpdateFields(input: UpdatePointInput): string[] {
+  const fields: string[] = [];
+
+  if (input.deleted !== undefined) {
+    fields.push(input.deleted ? "deleted" : "restored");
+  }
+
+  if (input.name !== undefined) {
+    fields.push("name");
+  }
+
+  if (input.emoji !== undefined) {
+    fields.push("emoji");
+  }
+
+  if (input.color !== undefined) {
+    fields.push("color");
+  }
+
+  return fields;
+}
 
 async function getHomePageProps(
   headers: Headers,
