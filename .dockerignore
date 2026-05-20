@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.env.*
+.git
+_fresh
+coverage
+dist
+node_modules
+.vite
+survivalmap.sqlite*
+data/*.sqlite*

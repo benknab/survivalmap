@@ -1,0 +1,15 @@
+services:
+  survivalmap:
+    build: .
+    image: survivalmap:local
+    ports:
+      - "18765:8000"
+    environment:
+      DATABASE_URL: "file:/data/survivalmap.sqlite"
+    volumes:
+      - survivalmap-data:/data
+    restart: unless-stopped
+
+volumes:
+  survivalmap-data:
+    name: survivalmap-data

@@ -31,6 +31,15 @@ deno task dev
 The dev task applies pending Drizzle migrations and starts the app at `http://localhost:8000`. By
 default, the local SQLite database lives at `data/survivalmap.sqlite` and is ignored by Git.
 
+To run the app with Docker Compose instead:
+
+```sh
+docker compose up --build
+```
+
+The Compose service publishes `http://localhost:18765` and stores SQLite data in the named Docker
+volume `survivalmap-data` at `/data/survivalmap.sqlite` inside the container.
+
 ## Common Commands
 
 ```sh
