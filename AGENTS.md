@@ -21,6 +21,8 @@ them.
   migrations, and local data.
 - The app should run as a single Deno process unless there is a concrete reason to split services.
 - Keep request/response validation near the route until a shared schema module is clearly useful.
+- Aim to keep source files at or below 200 lines. When a file grows past that, split it by semantic
+  responsibility instead of letting complexity accumulate.
 - `deno.json` is the source of truth for tasks and imports.
 - Do not keep `README.md` in lockstep with internal file paths or API inventories. Discover the
   current structure and route behavior from source when needed, and update README only for

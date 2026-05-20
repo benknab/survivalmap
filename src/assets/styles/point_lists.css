@@ -1,0 +1,103 @@
+.point-list {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.point-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  padding: 5px 0;
+  border-top: 1px solid rgba(125, 89, 50, 0.18);
+}
+
+.point-list li.is-selected {
+  border-top-color: rgba(47, 40, 31, 0.34);
+}
+
+.point-list-select {
+  display: grid;
+  width: 100%;
+  min-height: 0;
+  padding: 5px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+}
+
+.point-list-select:hover,
+.point-list li.is-selected .point-list-select {
+  background: var(--wash);
+}
+
+.point-list-details {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.point-list-title {
+  display: flex;
+  min-width: 0;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.point-list-removed li {
+  opacity: 0.74;
+}
+
+.point-list-removed strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.point-action-button {
+  display: grid;
+  width: 24px;
+  min-height: 24px;
+  place-items: center;
+  padding: 0;
+  border-color: rgba(125, 89, 50, 0.28);
+  border-radius: 4px;
+  color: var(--ink);
+  background: transparent;
+}
+
+.point-action-button:hover {
+  background: var(--wash);
+}
+
+.point-action-button.remove {
+  border-color: rgba(155, 61, 46, 0.42);
+  color: var(--error);
+}
+
+.point-action-icon {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.point-list strong,
+.point-list span,
+.point-list small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.point-list span,
+.point-list small {
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}

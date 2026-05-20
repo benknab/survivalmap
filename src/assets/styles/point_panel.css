@@ -1,0 +1,112 @@
+.point-panel,
+.drawer-toggle-button {
+  position: absolute;
+  z-index: 4;
+  border: 1px solid rgba(125, 89, 50, 0.2);
+  color: var(--ink);
+  background: rgba(255, 252, 244, 0.8);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(47, 40, 31, 0.14);
+}
+
+.point-panel {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  align-content: start;
+  width: var(--drawer-width);
+  gap: 7px;
+  overflow: auto;
+  padding: 10px;
+  border-width: 0 1px 0 0;
+  border-radius: 0;
+  box-shadow: 8px 0 24px rgba(47, 40, 31, 0.12);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+}
+
+.point-panel[hidden] {
+  display: none;
+}
+
+.point-panel-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.point-section-title,
+.point-list small,
+.point-message {
+  color: var(--muted);
+}
+
+.point-section-title {
+  padding-top: 4px;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.point-panel-header strong {
+  font-size: 0.82rem;
+}
+
+.point-panel label {
+  gap: 5px;
+  font-size: 0.64rem;
+}
+
+.point-message {
+  max-width: none;
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.point-message.error {
+  color: var(--error);
+}
+
+.point-form {
+  gap: 8px;
+  margin-top: 0;
+}
+
+.point-form input {
+  height: 30px;
+  padding: 0 8px;
+  font-size: 0.72rem;
+}
+
+.point-form-tabs,
+.point-coordinate-grid,
+.point-form-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.point-form-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.point-form-tab {
+  min-height: 28px;
+  border-color: rgba(125, 89, 50, 0.24);
+  color: var(--ink);
+  background: rgba(255, 252, 244, 0.5);
+  font-size: 0.62rem;
+}
+
+.point-form-tab:hover {
+  background: var(--wash);
+}
+
+.point-form-tab.active {
+  border-color: var(--ink);
+  color: var(--paper);
+  background: var(--ink);
+}

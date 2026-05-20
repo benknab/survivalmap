@@ -1,0 +1,112 @@
+.hero {
+  max-width: 780px;
+}
+
+.map-card {
+  max-width: none;
+}
+
+.tester,
+.split-panel {
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+
+.split-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 48px;
+}
+
+.split-panel > div:first-child {
+  padding-right: 48px;
+  border-right: 1px solid var(--line);
+}
+
+.map-id {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.map-id code {
+  padding: 3px 7px;
+}
+
+.current-user {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.user-list,
+.map-list {
+  display: grid;
+  padding: 0;
+  margin: 18px 0 0;
+  list-style: none;
+}
+
+.user-list li,
+.map-list a {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.user-list li:first-child,
+.map-list li:first-child a {
+  border-top: 1px solid var(--line);
+}
+
+.map-list a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.map-list a:hover span:first-child {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.map-list small {
+  color: var(--accent);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 800;
+}
+
+.user-picker {
+  margin: 24px 0;
+}
+
+.person-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+}
+
+.person-button:first-child {
+  border-top: 1px solid var(--line);
+}
+
+.person-button:hover {
+  background: var(--wash);
+}
+
+.compact-form {
+  max-width: 420px;
+  margin-top: 12px;
+}

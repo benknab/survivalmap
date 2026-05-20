@@ -1,0 +1,78 @@
+:root {
+  --paper: #f6f0e4;
+  --paper-deep: #eadfc9;
+  --ink: #2f281f;
+  --muted: #6f6454;
+  --line: #d3c5ae;
+  --wash: rgba(122, 92, 53, 0.08);
+  --accent: #7d5932;
+  --error: #9b3d2e;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: Georgia, "Times New Roman", ui-serif, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 16% 8%, rgba(255, 255, 255, 0.72), transparent 26rem),
+    radial-gradient(circle at 82% 12%, rgba(201, 176, 132, 0.22), transparent 25rem),
+    linear-gradient(90deg, rgba(86, 64, 35, 0.028) 1px, transparent 1px),
+    linear-gradient(rgba(86, 64, 35, 0.025) 1px, transparent 1px),
+    linear-gradient(135deg, #fbf7ee 0%, var(--paper) 54%, var(--paper-deep) 100%);
+  background-size: auto, auto, 24px 24px, 24px 24px, auto;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    repeating-linear-gradient(8deg, rgba(72, 54, 31, 0.035) 0 1px, transparent 1px 11px),
+    repeating-linear-gradient(97deg, rgba(255, 255, 255, 0.16) 0 1px, transparent 1px 13px);
+  mix-blend-mode: multiply;
+  opacity: 0.45;
+}
+
+body:has(.map-page) {
+  overflow: hidden;
+}
+
+body:has(.map-page) main {
+  width: 100%;
+  min-height: 100dvh;
+  padding: 0;
+}
+
+main {
+  display: grid;
+  width: min(1080px, 100%);
+  min-height: 100vh;
+  gap: 40px;
+  align-content: start;
+  margin: 0 auto;
+  padding: 56px 32px 72px;
+}
+
+section {
+  position: relative;
+}
+
+code,
+pre {
+  color: var(--ink);
+  background: var(--wash);
+}
+
+pre {
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+}

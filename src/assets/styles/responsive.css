@@ -1,0 +1,61 @@
+@media (max-width: 700px) {
+  main {
+    gap: 34px;
+    padding: 34px 18px 56px;
+  }
+
+  .tester,
+  .split-panel {
+    padding-top: 26px;
+  }
+
+  .split-panel {
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+
+  .split-panel > div:first-child {
+    padding-right: 0;
+    padding-bottom: 34px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .map-grid {
+    --drawer-width: min(250px, calc(100vw - 92px));
+    min-height: 100dvh;
+  }
+
+  .map-control-stack {
+    right: 10px;
+    bottom: 10px;
+    gap: 6px;
+  }
+
+  .point-panel {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: var(--drawer-width);
+    max-height: none;
+    padding: 9px;
+    border-radius: 0;
+  }
+
+  .point-marker-label {
+    max-width: 112px;
+  }
+
+  .drawer-toggle-button {
+    left: calc(var(--drawer-width) - 1px);
+  }
+
+  .map-scale {
+    font-size: 0.58rem;
+  }
+
+  .map-compass {
+    width: 32px;
+    height: 32px;
+  }
+}

@@ -1,0 +1,12 @@
+export const cellMeters = 100;
+export const baseCellPixels = 48;
+export const minZoom = 0.32;
+export const maxZoom = 2.8;
+export const noSavedPointMessage = "Save a point before using bearing input.";
+export const dragging = true;
+export const notDragging = false;
+export const drawerOpen = true;
+export const relativePointListOpen = true;
+export const relativePointListClosed = false;
+export const pointDeleted = true;
+export const pointRestored = false;
