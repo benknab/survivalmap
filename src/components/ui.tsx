@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { ComponentChildren, JSX } from "preact";
 
 export type CreateMapFieldErrors = Partial<Record<"name" | "nickname", string>>;
 export type JoinMapFieldErrors = Partial<Record<"id", string>>;
@@ -9,17 +9,17 @@ type PanelProps = {
   className?: string;
 };
 
-export function Panel({ className = "hero", children }: PanelProps) {
+export function Panel({ className = "hero", children }: PanelProps): JSX.Element {
   return <section className={className}>{children}</section>;
 }
 
-export function Eyebrow({ children }: { children: ComponentChildren }) {
+export function Eyebrow({ children }: { children: ComponentChildren }): JSX.Element {
   return <p className="eyebrow">{children}</p>;
 }
 
 export function CreateMapForm(
   { error, fieldErrors = {} }: { error?: string; fieldErrors?: CreateMapFieldErrors },
-) {
+): JSX.Element {
   return (
     <>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
@@ -42,7 +42,7 @@ export function CreateMapForm(
 
 export function JoinMapForm(
   { error, fieldErrors = {} }: { error?: string; fieldErrors?: JoinMapFieldErrors },
-) {
+): JSX.Element {
   return (
     <>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
@@ -64,7 +64,7 @@ export function AddUserForm(
     error?: string;
     fieldErrors?: AddUserFieldErrors;
   },
-) {
+): JSX.Element {
   return (
     <>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
@@ -80,6 +80,8 @@ export function AddUserForm(
   );
 }
 
-export function LinkButton({ href, children }: { href: string; children: ComponentChildren }) {
+export function LinkButton(
+  { href, children }: { href: string; children: ComponentChildren },
+): JSX.Element {
   return <a className="link-button" href={href}>{children}</a>;
 }

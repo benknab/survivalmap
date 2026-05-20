@@ -123,6 +123,13 @@ const baseCellPixels = 48;
 const minZoom = 0.32;
 const maxZoom = 2.8;
 const noSavedPointMessage = "Save a point before using bearing input.";
+const dragging = true;
+const notDragging = false;
+const drawerOpen = true;
+const relativePointListOpen = true;
+const relativePointListClosed = false;
+const pointDeleted = true;
+const pointRestored = false;
 
 // TanStack ships React typings; Fresh runs it through Preact compat at runtime.
 const PreactQueryClientProvider = QueryClientProvider as unknown as FunctionComponent<{
@@ -130,7 +137,7 @@ const PreactQueryClientProvider = QueryClientProvider as unknown as FunctionComp
   children: ComponentChildren;
 }>;
 
-export default function MapGrid(props: MapGridProps) {
+export default function MapGrid(props: MapGridProps): JSX.Element {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
@@ -140,7 +147,7 @@ export default function MapGrid(props: MapGridProps) {
   );
 }
 
-function MapGridContents({ mapId, mapName }: MapGridProps) {
+function MapGridContents({ mapId, mapName }: MapGridProps): JSX.Element {
   const queryClient = useQueryClient();
   const pointsQueryKey = ["map-points", mapId] as const;
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -150,16 +157,16 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     width: typeof globalThis.innerWidth === "number" ? globalThis.innerWidth : 0,
     height: typeof globalThis.innerHeight === "number" ? globalThis.innerHeight : 0,
   }));
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDragging, setIsDragging] = useState(notDragging);
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(drawerOpen);
   const [pointDraft, setPointDraft] = useState<PointDraft | null>(null);
   const [selectedPointId, setSelectedPointId] = useState<number | null>(null);
   const [pointEditDraft, setPointEditDraft] = useState<PointEditDraft | null>(null);
   const [hoveredPointId, setHoveredPointId] = useState<number | null>(null);
   const [pointError, setPointError] = useState<string | null>(null);
   const [pendingPointIds, setPendingPointIds] = useState<number[]>([]);
-  const [isRelativePointListOpen, setIsRelativePointListOpen] = useState(false);
+  const [isRelativePointListOpen, setIsRelativePointListOpen] = useState(relativePointListClosed);
   const pointsQuery = useQuery({
     queryKey: pointsQueryKey,
     queryFn: ({ signal }) => fetchPoints(mapId, signal),
@@ -172,7 +179,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
         savedPoint,
       ]);
       setPointDraft(null);
-      setIsRelativePointListOpen(false);
+      setIsRelativePointListOpen(relativePointListClosed);
     },
     onError: (error) => {
       setPointError(getErrorMessage(error, "Could not save point."));
@@ -213,7 +220,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     },
   });
 
-  function cacheUpdatedPoint(updatedPoint: MapPoint) {
+  function cacheUpdatedPoint(updatedPoint: MapPoint): void {
     queryClient.setQueryData<MapPoint[]>(
       pointsQueryKey,
       (currentPoints) =>
@@ -237,7 +244,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
 
     updateSize();
 
-    const observer = new ResizeObserver(updateSize);
+    const observer = new globalThis.ResizeObserver(updateSize);
     observer.observe(canvas);
 
     return () => observer.disconnect();
@@ -270,18 +277,18 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     `--grid-origin-y: ${origin.y}px`,
   ].join(";");
 
-  function handlePointerDown(event: JSX.TargetedPointerEvent<HTMLDivElement>) {
+  function handlePointerDown(event: JSX.TargetedPointerEvent<HTMLDivElement>): void {
     if (event.button !== 0) {
       return;
     }
 
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-    setIsDragging(true);
+    setIsDragging(dragging);
     setCursorPosition(getEventCursorPosition(event, view));
   }
 
-  function handlePointerMove(event: JSX.TargetedPointerEvent<HTMLDivElement>) {
+  function handlePointerMove(event: JSX.TargetedPointerEvent<HTMLDivElement>): void {
     setCursorPosition(getEventCursorPosition(event, view));
 
     if (dragRef.current?.pointerId !== event.pointerId) {
@@ -298,20 +305,20 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     }));
   }
 
-  function handlePointerEnd(event: JSX.TargetedPointerEvent<HTMLDivElement>) {
+  function handlePointerEnd(event: JSX.TargetedPointerEvent<HTMLDivElement>): void {
     if (dragRef.current?.pointerId === event.pointerId) {
       dragRef.current = null;
-      setIsDragging(false);
+      setIsDragging(notDragging);
     }
   }
 
-  function handlePointerLeave() {
+  function handlePointerLeave(): void {
     if (!isDragging) {
       setCursorPosition(null);
     }
   }
 
-  function handleWheel(event: JSX.TargetedWheelEvent<HTMLDivElement>) {
+  function handleWheel(event: JSX.TargetedWheelEvent<HTMLDivElement>): void {
     event.preventDefault();
 
     const rect = event.currentTarget.getBoundingClientRect();
@@ -327,7 +334,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     );
   }
 
-  function changeZoom(multiplier: number) {
+  function changeZoom(multiplier: number): void {
     const canvas = canvasRef.current;
 
     if (!canvas) {
@@ -343,7 +350,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     );
   }
 
-  function startPointDraft() {
+  function startPointDraft(): void {
     const targetCoordinate = cursorPosition?.coordinate ??
       screenToWorld(size.width / 2, size.height / 2, view, size);
     setSelectedPointId(null);
@@ -361,11 +368,11 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
       relativeBearing: "",
       relativeDistance: "",
     });
-    setIsRelativePointListOpen(false);
+    setIsRelativePointListOpen(relativePointListClosed);
     setPointError(null);
   }
 
-  function updatePointDraft(field: PointDraftTextField, value: string) {
+  function updatePointDraft(field: PointDraftTextField, value: string): void {
     setPointDraft((currentDraft) => {
       if (!currentDraft) {
         return null;
@@ -379,13 +386,13 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     });
   }
 
-  function switchPointFormMode(formMode: PointFormMode) {
+  function switchPointFormMode(formMode: PointFormMode): void {
     setPointDraft((currentDraft) => currentDraft ? { ...currentDraft, formMode } : null);
-    setIsRelativePointListOpen(false);
+    setIsRelativePointListOpen(relativePointListClosed);
     setPointError(null);
   }
 
-  function selectRelativePoint(point: MapPoint) {
+  function selectRelativePoint(point: MapPoint): void {
     setPointDraft((currentDraft) => {
       if (!currentDraft) {
         return null;
@@ -397,24 +404,24 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
         relativePointQuery: getPointOptionValue(point),
       };
     });
-    setIsRelativePointListOpen(false);
+    setIsRelativePointListOpen(relativePointListClosed);
   }
 
-  function selectPoint(point: MapPoint) {
-    setIsDrawerOpen(true);
+  function selectPoint(point: MapPoint): void {
+    setIsDrawerOpen(drawerOpen);
     setPointDraft(null);
-    setIsRelativePointListOpen(false);
+    setIsRelativePointListOpen(relativePointListClosed);
     setSelectedPointId(point.id);
     setPointEditDraft(getPointEditDraft(point));
     setPointError(null);
     setView((currentView) => centerViewOnCoordinate(currentView, point));
   }
 
-  function updatePointEditDraft(field: PointEditField, value: string) {
+  function updatePointEditDraft(field: PointEditField, value: string): void {
     setPointEditDraft((currentDraft) => currentDraft ? { ...currentDraft, [field]: value } : null);
   }
 
-  function resetPointEditDraft() {
+  function resetPointEditDraft(): void {
     if (!selectedPoint) {
       return;
     }
@@ -423,18 +430,18 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     setPointError(null);
   }
 
-  function clearPointSelection() {
+  function clearPointSelection(): void {
     setSelectedPointId(null);
     setPointEditDraft(null);
     setPointError(null);
   }
 
-  function cancelPointDraft() {
+  function cancelPointDraft(): void {
     setPointDraft(null);
-    setIsRelativePointListOpen(false);
+    setIsRelativePointListOpen(relativePointListClosed);
   }
 
-  function handlePointEditSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>) {
+  function handlePointEditSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
 
     if (!selectedPoint || !pointEditDraft || savePointEditMutation.isPending) {
@@ -456,7 +463,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     savePointEditMutation.mutate({ pointId: selectedPoint.id, point: nextPoint });
   }
 
-  function handleManualPointSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>) {
+  function handleManualPointSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
 
     if (!pointDraft || createPointMutation.isPending) {
@@ -484,7 +491,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     createPointMutation.mutate(nextPoint);
   }
 
-  function handleBearingPointSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>) {
+  function handleBearingPointSubmit(event: JSX.TargetedSubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
 
     if (!pointDraft || createPointMutation.isPending) {
@@ -516,7 +523,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
     createPointMutation.mutate(nextPoint);
   }
 
-  function handleUpdatePointDeletedState(pointId: number, deleted: boolean) {
+  function handleUpdatePointDeletedState(pointId: number, deleted: boolean): void {
     if (pendingPointIds.includes(pointId)) {
       return;
     }
@@ -737,12 +744,12 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
                           autoComplete="off"
                           placeholder="Search saved points"
                           value={pointDraft.relativePointQuery}
-                          onFocus={() => setIsRelativePointListOpen(true)}
-                          onClick={() => setIsRelativePointListOpen(true)}
-                          onBlur={() => setIsRelativePointListOpen(false)}
+                          onFocus={() => setIsRelativePointListOpen(relativePointListOpen)}
+                          onClick={() => setIsRelativePointListOpen(relativePointListOpen)}
+                          onBlur={() => setIsRelativePointListOpen(relativePointListClosed)}
                           onInput={(event) => {
                             updatePointDraft("relativePointQuery", event.currentTarget.value);
-                            setIsRelativePointListOpen(true);
+                            setIsRelativePointListOpen(relativePointListOpen);
                           }}
                         />
                         {isRelativePointListOpen
@@ -950,7 +957,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
                       aria-label={isPending ? `Removing ${point.name}` : `Remove ${point.name}`}
                       title={isPending ? "Removing point" : "Remove point"}
                       disabled={isPending}
-                      onClick={() => handleUpdatePointDeletedState(point.id, true)}
+                      onClick={() => handleUpdatePointDeletedState(point.id, pointDeleted)}
                     >
                       <TrashIcon />
                     </button>
@@ -985,7 +992,7 @@ function MapGridContents({ mapId, mapName }: MapGridProps) {
                         aria-label={isPending ? `Restoring ${point.name}` : `Restore ${point.name}`}
                         title={isPending ? "Restoring point" : "Restore point"}
                         disabled={isPending}
-                        onClick={() => handleUpdatePointDeletedState(point.id, false)}
+                        onClick={() => handleUpdatePointDeletedState(point.id, pointRestored)}
                       >
                         <RestoreIcon />
                       </button>
@@ -1051,7 +1058,7 @@ type PointStylePickerProps = {
   onChange: (field: PointStyleField, value: string) => void;
 };
 
-function PointStylePicker({ draft, onChange }: PointStylePickerProps) {
+function PointStylePicker({ draft, onChange }: PointStylePickerProps): JSX.Element {
   return (
     <div className="point-style-picker">
       <div>
@@ -1412,7 +1419,7 @@ async function readJsonResponse<T>(response: Response, fallback: string): Promis
   }
 }
 
-function TrashIcon() {
+function TrashIcon(): JSX.Element {
   return (
     <svg className="point-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M4 7h16" />
@@ -1424,7 +1431,7 @@ function TrashIcon() {
   );
 }
 
-function RestoreIcon() {
+function RestoreIcon(): JSX.Element {
   return (
     <svg className="point-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M7 7a7 7 0 1 1-1.8 6.8" />
@@ -1433,7 +1440,7 @@ function RestoreIcon() {
   );
 }
 
-function PlusIcon() {
+function PlusIcon(): JSX.Element {
   return (
     <svg className="map-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M12 5v14" />
@@ -1442,7 +1449,7 @@ function PlusIcon() {
   );
 }
 
-function MinusIcon() {
+function MinusIcon(): JSX.Element {
   return (
     <svg className="map-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M5 12h14" />
@@ -1450,7 +1457,7 @@ function MinusIcon() {
   );
 }
 
-function ChevronLeftIcon() {
+function ChevronLeftIcon(): JSX.Element {
   return (
     <svg className="map-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M15 6l-6 6 6 6" />
@@ -1458,7 +1465,7 @@ function ChevronLeftIcon() {
   );
 }
 
-function ChevronRightIcon() {
+function ChevronRightIcon(): JSX.Element {
   return (
     <svg className="map-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M9 6l6 6-6 6" />
@@ -1466,7 +1473,7 @@ function ChevronRightIcon() {
   );
 }
 
-function CompassIcon() {
+function CompassIcon(): JSX.Element {
   return (
     <svg className="map-compass-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
       <circle className="map-compass-ring" cx="16" cy="16" r="13" />

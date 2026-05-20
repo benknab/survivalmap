@@ -1,5 +1,6 @@
 const snakeCasePattern = /^[a-z0-9]+(?:_[a-z0-9]+)*$/;
 const sourceExtensions = [".ts", ".tsx"];
+const stderrEncoder = new globalThis.TextEncoder();
 
 function isTypeScriptSourceFile(name: string): boolean {
   return sourceExtensions.some((extension) => name.endsWith(extension));
@@ -31,13 +32,25 @@ async function walk(directory: string, violations: string[]): Promise<void> {
   }
 }
 
-const violations: string[] = [];
-await walk("src", violations);
-
-if (violations.length > 0) {
-  console.error("Non-snake-case TypeScript source filenames:");
-  for (const violation of violations) {
-    console.error(`- ${violation}`);
-  }
-  Deno.exit(1);
+async function getViolations(): Promise<string[]> {
+  const violations: string[] = [];
+  await walk("src", violations);
+  return violations;
 }
+
+function writeErrorLine(message: string): void {
+  Deno.stderr.writeSync(stderrEncoder.encode(`${message}\n`));
+}
+
+void getViolations().then((violations) => {
+  if (violations.length === 0) {
+    return;
+  }
+
+  writeErrorLine("Non-snake-case TypeScript source filenames:");
+  for (const violation of violations) {
+    writeErrorLine(`- ${violation}`);
+  }
+
+  Deno.exit(1);
+});

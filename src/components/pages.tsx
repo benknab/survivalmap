@@ -1,4 +1,5 @@
 import { Head } from "fresh/runtime";
+import type { JSX } from "preact";
 import MapGrid from "../islands/map_grid.tsx";
 import type { MapRecord, UserRecord } from "../schema.ts";
 import {
@@ -48,7 +49,7 @@ export function HomePage(
     joinMapError,
     joinMapFieldErrors = {},
   }: HomePageProps,
-) {
+): JSX.Element {
   return (
     <>
       <Head>
@@ -98,7 +99,7 @@ export function HomePage(
   );
 }
 
-export function UserSelectPage({ map, users, error }: UserSelectPageProps) {
+export function UserSelectPage({ map, users, error }: UserSelectPageProps): JSX.Element {
   return (
     <>
       <Head>
@@ -137,7 +138,7 @@ export function UserSelectPage({ map, users, error }: UserSelectPageProps) {
 
 export function MapPage(
   { map, currentUser }: MapPageProps,
-) {
+): JSX.Element {
   return (
     <>
       <Head>
@@ -150,7 +151,7 @@ export function MapPage(
   );
 }
 
-export function MapNotFoundPage() {
+export function MapNotFoundPage(): JSX.Element {
   return (
     <>
       <Head>
@@ -166,7 +167,7 @@ export function MapNotFoundPage() {
   );
 }
 
-export function ErrorPage() {
+export function ErrorPage(): JSX.Element {
   return (
     <>
       <Head>

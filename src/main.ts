@@ -368,6 +368,7 @@ type LogValue = string | number | boolean | null | undefined | LogValue[] | {
 };
 type LogContext = Record<string, LogValue>;
 type LogLevel = "info" | "warn" | "error";
+const logEncoder = new globalThis.TextEncoder();
 
 async function logRequest(ctx: Context<unknown>): Promise<Response> {
   const startedAt = performance.now();
@@ -432,13 +433,14 @@ function writeLog(level: LogLevel, event: string, context: LogContext): void {
     event,
     ...context,
   });
+  const encodedMessage = logEncoder.encode(`${message}\n`);
 
   if (level === "error") {
-    console.error(message);
+    Deno.stderr.writeSync(encodedMessage);
   } else if (level === "warn") {
-    console.warn(message);
+    Deno.stderr.writeSync(encodedMessage);
   } else {
-    console.info(message);
+    Deno.stdout.writeSync(encodedMessage);
   }
 }
 
@@ -488,24 +490,23 @@ async function getHomePageProps(
 
 async function getCurrentMaps(headers: Headers): Promise<CurrentMap[]> {
   const selections = getUserCookieSelections(headers);
-  const currentMaps: CurrentMap[] = [];
+  const currentMaps = await Promise.all(
+    Object.entries(selections).map(async ([mapId, userId]) => {
+      const [map, user] = await Promise.all([getMap(mapId), getUserForMap(mapId, userId)]);
 
-  for (const [mapId, userId] of Object.entries(selections)) {
-    const map = await getMap(mapId);
-    const user = await getUserForMap(mapId, userId);
+      if (!map || !user) {
+        return null;
+      }
 
-    if (!map || !user) {
-      continue;
-    }
+      return {
+        id: map.id,
+        name: map.name,
+        userNickname: user.nickname,
+      };
+    }),
+  );
 
-    currentMaps.push({
-      id: map.id,
-      name: map.name,
-      userNickname: user.nickname,
-    });
-  }
-
-  return currentMaps;
+  return currentMaps.filter((map): map is CurrentMap => map !== null);
 }
 
 async function createMap(

@@ -1,6 +1,7 @@
 import type { PageProps } from "fresh";
+import type { JSX } from "preact";
 
-export function AppWrapper({ Component }: PageProps) {
+export function AppWrapper({ Component }: PageProps): JSX.Element {
   return (
     <html lang="en">
       <head>

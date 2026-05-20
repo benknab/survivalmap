@@ -1,14 +1,14 @@
 export const pointEmojiValues = [
-  "📍",
-  "⛺",
-  "🔥",
-  "💧",
-  "🌲",
-  "🏠",
-  "⚠️",
-  "💎",
-  "🧰",
-  "🦌",
+  "\u{1f4cd}",
+  "\u{26fa}",
+  "\u{1f525}",
+  "\u{1f4a7}",
+  "\u{1f332}",
+  "\u{1f3e0}",
+  "\u{26a0}\u{fe0f}",
+  "\u{1f48e}",
+  "\u{1f9f0}",
+  "\u{1f98c}",
 ] as const;
 
 export const pointColorValues = [

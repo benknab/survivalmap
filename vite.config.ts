@@ -1,8 +1,7 @@
 import { fresh } from "@fresh/plugin-vite";
 import { defineConfig } from "vite";
-import process from "node:process";
 
-const port = Number(process.env.PORT ?? "8000");
+const port = Number(Deno.env.get("PORT") ?? "8000");
 
 export default defineConfig({
   plugins: [
